@@ -54,6 +54,6 @@ jobs:
       - name: Smoke test image
         run: |
           docker build -t studio-smoke .
-          docker run -d --name s -p 3000:3000 -e NO_ENGINE=1 studio-smoke
+          docker run -d --name studio-smoke-run -p 3000:3000 -e NO_ENGINE=1 studio-smoke
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:3000/api/health && exit 0; sleep 2; done
-          docker logs s; exit 1
+          docker logs studio-smoke-run; exit 1
