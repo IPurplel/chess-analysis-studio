@@ -280,3 +280,5 @@ ul.bullets { margin: var(--space-xs) 0 0; padding-inline-start: var(--space-lg);
 .explainbox { flex-basis: 100%; display: grid; gap: var(--space-xs); }
 .explainbox p { margin: 0; }
 .explainbox details summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--color-muted); }
+
+.curated { margin: 0; padding: var(--space-xs) var(--space-sm); border: var(--rule-hair) solid var(--color-accent); border-radius: var(--radius-pill); background: var(--color-paper-3); }

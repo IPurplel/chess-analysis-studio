@@ -8,7 +8,7 @@ import { explainMove } from './explain';
 import { JudgeCard, useJudge } from './JudgeCard';
 import { BotGame } from './Play';
 
-interface Line { id: string; name: string; idea: string; san: string[]; uci: string[]; vs?: string; plan?: string; watch?: string }
+interface Line { id: string; name: string; idea: string; san: string[]; uci: string[]; vs?: string; plan?: string; watch?: string; notes?: string[] }
 interface Family {
   id: string; name: string; owner: 'w' | 'b'; start: string; idea: string; lines: Line[];
   category?: string; level?: string; summary?: string; plans?: { w?: string[]; b?: string[] }; mistakes?: string[];
@@ -54,6 +54,7 @@ function Lesson({ family, line, role, onBack, onPractice, onPlayOn }: {
   const userTurn = !done && side === userColor;
   const last: [string, string] | null = i > 0 ? [line.uci[i - 1].slice(0, 2), line.uci[i - 1].slice(2, 4)] : null;
   const why = expected ? explainMove(fens[i], expected, i > 0 ? line.uci[i - 1] : undefined) : '';
+  const note = getLang() === 'ar' ? line.notes?.[i] || '' : ''; // hand-written, Arabic only
   // other scenarios of this opening that branch off at this move: what else can happen here
   const branches = useMemo(() => {
     if (done) return [];
@@ -88,7 +89,8 @@ function Lesson({ family, line, role, onBack, onPractice, onPlayOn }: {
           <div className="lessonstep" role="status">
             <p className="label">{t('tr.stepOf', { i: i + 1, n: line.uci.length })}</p>
             <p className="lesson-move measured" dir="ltr">{userTurn ? t('tr.play') : t('tr.watch')} <b>{line.san[i]}</b></p>
-            <p>{why}</p>
+            {note && <p className="curated">{note}</p>}
+            <p className={note ? 'muted' : ''}>{why}</p>
             {userTurn ? <p className="muted">{t('tr.learnHint')}</p> : <p className="muted">{t('tr.oppHint')}</p>}
             {branches.length > 0 && (
               <div className="branchbox">
@@ -189,7 +191,8 @@ function Drill({ family, lines, role, onBack, onSwap }: { family: Family; lines:
   const restart = () => { setHist([]); setFen(new Chess().fen()); setMistakes(0); setDone(null); setMsg(''); setHintLevel(0); judge.clear(); reported.current = false; };
 
   const san = alive[0]?.san[hist.length];
-  const why = userTurn && target ? explainMove(fen, target, hist[hist.length - 1]) : '';
+  const note = getLang() === 'ar' ? alive[0]?.notes?.[hist.length] || '' : '';
+  const why = userTurn && target ? (note ? `${note} ` : '') + explainMove(fen, target, hist[hist.length - 1]) : '';
   const arrows = [] as { from: string; to?: string; brush: 'green' | 'blue' }[];
   if (target && hintLevel >= 2) arrows.push(hintLevel >= 3 ? { from: target.slice(0, 2), to: target.slice(2, 4), brush: 'green' } : { from: target.slice(0, 2), brush: 'blue' });
 

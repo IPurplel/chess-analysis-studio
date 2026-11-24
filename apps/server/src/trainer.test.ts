@@ -25,6 +25,15 @@ describe('opening trainer data', () => {
       }
     }
   });
+  it('hand-written notes, where present, line up with the moves', () => {
+    let withNotes = 0;
+    for (const f of loadTrainer().families) for (const l of f.lines as any[]) {
+      if (!l.notes) continue;
+      withNotes++;
+      expect(l.notes.length, f.id + '/' + l.id).toBe(l.san.length);
+    }
+    expect(withNotes).toBeGreaterThanOrEqual(8); // the Sicilian lines
+  });
   it('line ids are unique inside a family', () => {
     for (const f of loadTrainer().families) expect(new Set(f.lines.map((l) => l.id)).size).toBe(f.lines.length);
   });

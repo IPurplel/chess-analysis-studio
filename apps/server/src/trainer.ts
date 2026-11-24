@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 export interface RawLine { id: string; name: string; san: string; idea: string }
 export interface RawFamily { id: string; name: string; owner: 'w' | 'b'; start: string; idea: string; lines: RawLine[] }
-export interface Line { id: string; name: string; idea: string; san: string[]; uci: string[]; vs?: string; plan?: string; watch?: string }
+export interface Line { id: string; name: string; idea: string; san: string[]; uci: string[]; vs?: string; plan?: string; watch?: string; notes?: string[] }
 export interface Family {
   id: string; name: string; owner: 'w' | 'b'; start: string; idea: string; lines: Line[];
   category?: string; level?: string; summary?: string; plans?: { w?: string[]; b?: string[] }; mistakes?: string[];
@@ -13,7 +13,7 @@ interface Guide {
   categories: Record<string, { name: string; hint: string }>;
   principles: string[];
   families: Record<string, Partial<Family>>;
-  lines: Record<string, { vs?: string; plan?: string; watch?: string }>;
+  lines: Record<string, { vs?: string; plan?: string; watch?: string; notes?: string[] }>;
 }
 
 const FILE = process.env.COUNTERS_FILE ?? fileURLToPath(new URL('../../../data/counters.json', import.meta.url));
