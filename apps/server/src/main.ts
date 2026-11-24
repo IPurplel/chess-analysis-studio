@@ -13,6 +13,10 @@ import { openingsLoaded } from './openings.js';
 import { botMove } from './bot.js';
 import { buildSprint, getSetting, readSprint, setSetting } from './sprint.js';
 import { loadTrainer } from './trainer.js';
+import { judgeMove } from './judge.js';
+import { saveBotGame } from './botgame.js';
+import { currentSetId, markSetItem, setItemPuzzle, setOverview } from './sets.js';
+import { EngineUnavailable } from './analysis.js';
 import { ensureLibrary, importLibrary, libState, libraryCount, nextLibraryPuzzle, puzzleRating, recordAttempt, streak, themeStats } from './library.js';
 import { Chess } from 'chess.js';
 
@@ -270,9 +274,10 @@ app.get('/api/lib-puzzles/next', async (req) => {
 
 app.post('/api/lib-puzzles/:id/attempt', async (req, reply) => {
   const p = (req as any).profile;
-  const { solved, hints, ms } = (req.body ?? {}) as { solved?: boolean; hints?: number; ms?: number };
+  const { solved, hints, ms, setId } = (req.body ?? {}) as { solved?: boolean; hints?: number; ms?: number; setId?: number };
   const r = recordAttempt(p.id, String((req.params as any).id), !!solved, Math.max(0, Math.min(3, Number(hints) || 0)), Number.isFinite(ms) ? Number(ms) : null);
   if (!r) return reply.code(404).send({ error: 'unknown puzzle' });
+  if (setId) markSetItem(p.id, Number(setId), String((req.params as any).id), !!solved);
   return { before: Math.round(r.before), after: Math.round(r.after), streak: streak(p.id) };
 });
 
@@ -295,7 +300,7 @@ app.get('/api/trainer', async (req) => {
   const p = (req as any).profile;
   const t = loadTrainer();
   const prog = db.prepare('SELECT line_key, role, box, due_at, attempts, clean, mistakes FROM trainer_progress WHERE profile_id=?').all(p.id);
-  return { note: t.note, families: t.families, progress: prog };
+  return { note: t.note, categories: t.categories, principles: t.principles, families: t.families, progress: prog };
 });
 app.post('/api/trainer/result', async (req, reply) => {
   const p = (req as any).profile;
@@ -339,6 +344,52 @@ app.post('/api/sprint/check', async (req) => {
   if (done) m[key] = true; else delete m[key];
   setSetting(p.id, 'sprint_done', JSON.stringify(m));
   return { ok: true };
+});
+
+// ------------------------------------------------------------------ explain a move / save bot games / puzzle sets
+app.post('/api/judge', async (req, reply) => {
+  const p = (req as any).profile;
+  const { fen, uci } = (req.body ?? {}) as { fen?: string; uci?: string };
+  if (!fen || fen.length > 120 || !uci || !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(uci)) return reply.code(400).send({ error: 'bad request' });
+  try { new Chess(fen); } catch { return reply.code(400).send({ error: 'bad fen' }); }
+  if (limited('judge:' + p.id, 90, 60_000)) return reply.code(429).send({ error: 'slow down' });
+  try {
+    return await judgeMove(fen, uci);
+  } catch (e: any) {
+    if (e instanceof EngineUnavailable) return reply.code(503).send({ error: 'engine not ready' });
+    return reply.code(400).send({ error: String(e?.message ?? e) });
+  }
+});
+
+app.post('/api/games/bot', async (req, reply) => {
+  const p = (req as any).profile;
+  const b = (req.body ?? {}) as any;
+  if (limited('botgame:' + p.id, 30, 60 * 60_000)) return reply.code(429).send({ error: 'slow down' });
+  try {
+    const id = saveBotGame(p.id, p.name, { moves: b.moves, startFen: b.startFen, color: b.color === 'b' ? 'b' : 'w', elo: Number(b.elo) || 1000, resigned: !!b.resigned });
+    kick();
+    return { id };
+  } catch (e: any) {
+    return reply.code(400).send({ error: String(e?.message ?? e) });
+  }
+});
+
+app.get('/api/sets/current', async (req, reply) => {
+  const p = (req as any).profile;
+  const id = currentSetId(p.id, cachedTactics(p.id));
+  if (!id) return { ready: false };
+  return { ready: true, ...setOverview(p.id, id) };
+});
+app.post('/api/sets/new', async (req) => {
+  const p = (req as any).profile;
+  const id = currentSetId(p.id, cachedTactics(p.id), true);
+  return id ? { ready: true, ...setOverview(p.id, id) } : { ready: false };
+});
+app.get('/api/sets/:id/items/:idx', async (req, reply) => {
+  const p = (req as any).profile;
+  const { id, idx } = req.params as any;
+  const puzzle = setItemPuzzle(p.id, Number(id), Number(idx));
+  return puzzle ? { puzzle } : reply.code(404).send({ error: 'not found' });
 });
 
 app.post('/api/bot/move', async (req, reply) => {

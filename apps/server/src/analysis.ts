@@ -13,7 +13,9 @@ let wake: (() => void) | null = null;
 
 export function kick() { wake?.(); }
 
-async function evalFen(fen: string): Promise<PositionEval> {
+export class EngineUnavailable extends Error {}
+export async function evalFen(fen: string): Promise<PositionEval> {
+  if (!pool) throw new EngineUnavailable('engine not ready');
   const k = keyOf(fen);
   const hit = db.prepare('SELECT json FROM evals WHERE key=?').get(k) as { json: string } | undefined;
   if (hit) return JSON.parse(hit.json);
@@ -25,7 +27,7 @@ async function evalFen(fen: string): Promise<PositionEval> {
 export async function analyseGame(gameId: number): Promise<void> {
   const g = db.prepare('SELECT * FROM games WHERE id=?').get(gameId) as any;
   const moves: string[] = JSON.parse(g.moves_uci);
-  const chess = new Chess();
+  const chess = g.start_fen ? new Chess(g.start_fen) : new Chess();
   const fens = [chess.fen()];
   for (const m of moves) { playUci(chess, m); fens.push(chess.fen()); }
   const terminal = (f: string) => { const c = new Chess(f); return c.isGameOver(); };
@@ -52,11 +54,11 @@ function persist(g: any, evals: PositionEval[], fens0: string[], withPuzzles: bo
   const moves: string[] = JSON.parse(g.moves_uci);
   let fens = fens0;
   if (withPuzzles && fens.length === 0) {
-    const c = new Chess();
+    const c = g.start_fen ? new Chess(g.start_fen) : new Chess();
     fens = [c.fen()];
     for (const m of moves) { playUci(c, m); fens.push(c.fen()); }
   }
-  const review = reviewGame({ moves, evals, bookPlies: g.book_plies ?? 0, ratings: { w: g.white_rating, b: g.black_rating } });
+  const review = reviewGame({ moves, evals, startFen: g.start_fen ?? undefined, bookPlies: g.book_plies ?? 0, ratings: { w: g.white_rating, b: g.black_rating } });
   const mineColor = g.color as 'w' | 'b';
   tx(() => {
     db.prepare('INSERT OR REPLACE INTO reviews(game_id,json,acc_w,acc_b,analysed_at,version) VALUES (?,?,?,?,?,?)')

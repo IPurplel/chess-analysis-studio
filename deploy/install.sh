@@ -38,6 +38,7 @@ fi
 # remember the image choice for the update script / timer
 if [ -n "${STUDIO_IMAGE:-}" ]; then echo "STUDIO_IMAGE=${STUDIO_IMAGE}" > .env; fi
 
+export BUILD_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"
 echo "==> [2/5] بناء الصورة (يحمّل Stockfish الرسمي ويتحقق من بصمته) وتشغيل الخدمة"
 if [ -n "${STUDIO_IMAGE:-}" ]; then $DC pull && $DC up -d; else $DC up -d --build; fi
 

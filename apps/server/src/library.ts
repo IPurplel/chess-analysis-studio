@@ -94,7 +94,7 @@ export function puzzleRating(profileId: number, seedFrom?: number | null): numbe
   return start;
 }
 
-function toPuzzle(row: any): LibPuzzle | null {
+export function toPuzzle(row: any): LibPuzzle | null {
   const moves = String(row.moves).split(' ');
   const c = new Chess(row.fen);
   let setup: [string, string];

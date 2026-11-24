@@ -18,7 +18,7 @@ export function readSprint(profileId: number): SprintSettings {
 }
 
 /** Which puzzle themes train the mistakes this player actually makes. */
-const KIND_THEMES: Record<string, string[]> = {
+export const KIND_THEMES: Record<string, string[]> = {
   'hangs-piece': ['hangingPiece', 'trappedPiece'],
   'allows-tactic': ['fork', 'pin', 'hangingPiece'],
   'allows-mate': ['mateIn1', 'backRankMate'],

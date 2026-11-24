@@ -23,6 +23,9 @@ export function BotGame({ startFen, color, elo, goal, canHint = true }: GameProp
   const [fen, setFen] = useState(startFen);
   const hist = useRef<string[]>([startFen]);
   const sans = useRef<string[]>([]);
+  const ucis = useRef<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveErr, setSaveErr] = useState('');
   const [thinking, setThinking] = useState(false);
   const [last, setLast] = useState<[string, string] | null>(null);
   const [hint, setHint] = useState<{ from: string; to: string } | null>(null);
@@ -44,7 +47,7 @@ export function BotGame({ startFen, color, elo, goal, canHint = true }: GameProp
   const apply = (uci: string) => {
     const b = new Chess(fen);
     const m = b.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
-    hist.current.push(b.fen()); sans.current.push(m.san);
+    hist.current.push(b.fen()); sans.current.push(m.san); ucis.current.push(uci);
     setFen(b.fen()); setLast([uci.slice(0, 2), uci.slice(2, 4)]); setHint(null);
     finish(b);
   };
@@ -58,8 +61,16 @@ export function BotGame({ startFen, color, elo, goal, canHint = true }: GameProp
 
   const undo = () => {
     if (thinking || hist.current.length < 3) return;
-    hist.current.splice(-2); sans.current.splice(-2);
+    hist.current.splice(-2); sans.current.splice(-2); ucis.current.splice(-2);
     setFen(hist.current[hist.current.length - 1]); setLast(null); setOver(null); setHint(null);
+  };
+  /** Save this game to your account; the engine reviews it like any other game (what went wrong and why). */
+  const saveForReview = async () => {
+    setSaving(true); setSaveErr('');
+    try {
+      const r = await api('/games/bot', { body: { moves: ucis.current, startFen: startFen === new Chess().fen() ? null : startFen, color, elo, resigned: !over } });
+      location.hash = `#/review/${r.id}`;
+    } catch (e: any) { setSaveErr(e.message); setSaving(false); }
   };
   const getHint = async () => { const r = await api('/bot/move', { body: { fen, elo: 3190 } }); if (r.uci) setHint({ from: r.uci.slice(0, 2), to: r.uci.slice(2, 4) }); };
 
@@ -75,6 +86,12 @@ export function BotGame({ startFen, color, elo, goal, canHint = true }: GameProp
         </div>
         <p role="status" className={over ? `fb fb-${over.tone}` : 'muted'}>{over?.text ?? (thinking ? t('play.thinking') : myTurn ? t('play.yourTurn') : '')}</p>
         {myTurn && !over && !thinking && <MoveInput fen={fen} onMove={apply} />}
+        {ucis.current.length >= 4 && (
+          <div className="btnrow">
+            <button className="btn btn-primary" onClick={saveForReview} disabled={saving || thinking}>{over ? t('play.review') : t('play.finishReview')}</button>
+          </div>
+        )}
+        {saveErr && <p className="state-error-text" role="alert">{saveErr}</p>}
         <p className="measured movesline" dir="ltr">{sans.current.map((s, i) => (i % 2 === 0 ? `${Math.floor(i / 2) + 1}. ` : '') + s).join(' ')}</p>
       </aside>
     </div>

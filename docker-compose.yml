@@ -1,6 +1,9 @@
 services:
   studio:
-    build: .
+    build:
+      context: .
+      args:
+        BUILD_SHA: ${BUILD_SHA:-dev}
     image: ${STUDIO_IMAGE:-chess-analysis-studio:latest}
     container_name: chess-studio
     ports:

@@ -86,12 +86,85 @@ function Mine() {
 }
 
 export function Puzzles({ q }: { q: URLSearchParams }) {
-  const [tab, setTab] = useState(q.get('tab') === 'mine' ? 'mine' : 'library');
+  const [tab, setTab] = useState(q.get('tab') === 'mine' ? 'mine' : q.get('theme') ? 'library' : 'set');
   return (
     <div className="stack">
       <div className="pagehead"><h1>{t('pz.title')}</h1></div>
-      <Tabs value={tab} onChange={setTab} tabs={[{ id: 'library', label: t('pz.library') }, { id: 'mine', label: t('pz.mine') }]} />
-      {tab === 'library' ? <Library initialTheme={q.get('theme') ?? ''} /> : <Mine />}
+      <Tabs value={tab} onChange={setTab} tabs={[{ id: 'set', label: t('pz.set') }, { id: 'library', label: t('pz.free') }, { id: 'mine', label: t('pz.mine') }]} />
+      {tab === 'set' ? <SetTab /> : tab === 'library' ? <Library initialTheme={q.get('theme') ?? ''} /> : <Mine />}
+    </div>
+  );
+}
+
+/** 100 puzzles chosen for you; every cell shows whether you solved it. A new app release brings a new set. */
+function SetTab() {
+  const { data, error, loading, reload } = useApi<any>('/sets/current');
+  const [open, setOpen] = useState<number | null>(null);
+  const [puz, setPuz] = useState<any>(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    if (open == null || !data?.set) { setPuz(null); return; }
+    setErr('');
+    api(`/sets/${data.set.id}/items/${open}`).then((r) => setPuz(r.puzzle)).catch((e) => setErr(e.message));
+  }, [open, data?.set?.id]);
+
+  if (loading && !data) return <Loading h={420} />;
+  if (error) return <ErrorBox msg={error} retry={reload} />;
+  if (!data?.ready) return <Empty title={t('pz.libNotReady')} hint={t('pz.setWait')} action={<button className="btn" onClick={reload}>{t('common.retry')}</button>} />;
+
+  const items: any[] = data.items;
+  const total = items.length;
+  const nextUnsolved = (from: number) => {
+    const after = items.find((i) => i.idx > from && i.status !== 'solved');
+    return (after ?? items.find((i) => i.status !== 'solved'))?.idx ?? null;
+  };
+
+  if (open != null) {
+    const item = items.find((i) => i.idx === open);
+    return (
+      <div className="stack">
+        <div className="pagehead">
+          <p className="measured">#{open} / {total} · {item ? item.rating : ''}</p>
+          <button className="btn btn-quiet" onClick={() => { setOpen(null); reload(); }}>{t('common.back')}</button>
+        </div>
+        {err && <ErrorBox msg={err} />}
+        {!puz && !err && <Loading h={420} />}
+        {puz && (
+          <PuzzlePlayer key={`${data.set.id}-${open}`}
+            puzzle={{ id: puz.id, fen: puz.fen, orientation: puz.orientation, solution: puz.solution, setup: puz.setup, themes: puz.themes }}
+            onResult={(r) => api(`/lib-puzzles/${puz.id}/attempt`, { body: { solved: r.solved, hints: r.hints, ms: r.ms, setId: data.set.id } }).then(reload).catch(() => {})}
+            onNext={() => { const n = nextUnsolved(open); setPuz(null); setOpen(n); if (n == null) reload(); }} />
+        )}
+      </div>
+    );
+  }
+
+  const solved = data.counts.solved ?? 0, failed = data.counts.failed ?? 0;
+  return (
+    <div className="stack">
+      <p className="muted">{t('pz.setHint')}</p>
+      <div className="panel setbar">
+        <div>
+          <span className="reading">{solved}<small>/{total}</small></span>
+          <span className="label">{t('pz.setProgress', { n: solved, total })} · {t('pz.setFailed', { n: failed })} · <span className="measured">{t('pz.setRelease', { r: data.set.release })}</span></span>
+          <progress className="stepbar" value={solved} max={total} aria-label={t('pz.setProgress', { n: solved, total })} />
+        </div>
+        <div className="btnrow">
+          <button className="btn btn-primary" disabled={solved >= total} onClick={() => setOpen(nextUnsolved(0))}>{t('pz.setNext')}</button>
+          <button className="btn btn-quiet" onClick={() => { if (window.confirm(t('pz.setConfirm'))) api('/sets/new', { method: 'POST', body: {} }).then(reload); }}>{t('pz.setNew')}</button>
+        </div>
+      </div>
+      {solved >= total && <p className="fb fb-ok">{t('pz.setDone')}</p>}
+      <div className="setgrid" role="list">
+        {items.map((i) => (
+          <button key={i.idx} role="listitem" className={`setcell is-${i.status}`} onClick={() => setOpen(i.idx)}
+            aria-label={`${i.idx}: ${t(i.status === 'solved' ? 'pz.cellSolved' : i.status === 'failed' ? 'pz.cellFailed' : 'pz.cellNew')} (${i.rating})`}
+            title={`${i.rating} · ${i.themes.map(themeName).join(', ')}`}>
+            {i.status === 'solved' ? '✓' : i.status === 'failed' ? '✗' : i.idx}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -6,7 +6,7 @@ export function Filters({ tc, color, set, noColor }: { tc: string; color: string
     <div className="filters" role="group">
       <label className="field"><span className="label">{t('common.tc')}</span>
         <select value={tc} onChange={(e) => set('tc', e.target.value)}>
-          {['rapid', 'blitz', 'bullet', 'daily', 'all'].map((k) => <option key={k} value={k}>{tcName(k)}</option>)}
+          {['rapid', 'blitz', 'bullet', 'daily', 'bot', 'all'].map((k) => <option key={k} value={k}>{tcName(k)}</option>)}
         </select></label>
       {!noColor && (
         <label className="field"><span className="label">{t('common.color')}</span>

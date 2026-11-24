@@ -13,6 +13,18 @@ describe('opening trainer data', () => {
       }
     }
   });
+  it('every opening and scenario has a written guide (plan, mistakes, what to watch)', () => {
+    for (const f of loadTrainer().families) {
+      expect(f.summary, f.id).toBeTruthy();
+      expect(f.category, f.id).toBeTruthy();
+      expect((f.plans?.w?.length ?? 0) + (f.plans?.b?.length ?? 0), f.id).toBeGreaterThan(2);
+      expect(f.mistakes?.length, f.id).toBeGreaterThan(1);
+      for (const l of f.lines) {
+        expect(l.plan, f.id + '/' + l.id).toBeTruthy();
+        expect(l.watch, f.id + '/' + l.id).toBeTruthy();
+      }
+    }
+  });
   it('line ids are unique inside a family', () => {
     for (const f of loadTrainer().families) expect(new Set(f.lines.map((l) => l.id)).size).toBe(f.lines.length);
   });

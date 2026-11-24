@@ -6,6 +6,7 @@ import { t, dateLocal } from '../i18n';
 import { ErrorBox, Loading } from '../ui';
 import { KIND_THEME } from './Insights';
 import { PuzzlePlayer } from './PuzzlePlayer';
+import { explainMove, pvToSan } from './explain';
 
 const CATS = ['brilliant', 'great', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'blunder'];
 
@@ -36,6 +37,40 @@ function CountCell({ n, onClick, cur }: { n: number; onClick: () => void; cur?: 
   return <button className="countbtn measured" onClick={onClick} title={t('rev.jumpHint')}>{cur != null ? `${cur + 1}/${n}` : n}</button>;
 }
 
+/** Concrete "what happened and why" for one move: the opponent's reply, the better move and the engine's alternatives. */
+function MoveExplain({ mv, review, fens, mine }: { mv: any; review: any; fens: string[]; mine: boolean }) {
+  const before = review?.evals?.[mv.ply]?.lines ?? [];
+  const afterLine = review?.evals?.[mv.ply + 1]?.lines?.[0];
+  const bad = ['inaccuracy', 'mistake', 'blunder'].includes(mv.category);
+  const reply = afterLine ? pvToSan(fens[mv.ply + 1], afterLine.pv, 4) : [];
+  const bestLine = before[0] ? pvToSan(fens[mv.ply], before[0].pv, 6) : [];
+  const bestWhy = bad && mv.bestUci && mv.bestUci !== mv.uci ? explainMove(fens[mv.ply], mv.bestUci) : '';
+  const ev = (l: any) => (l.mate ? '#' + l.mate : (l.cp > 0 ? '+' : '') + ((l.cp ?? 0) / 100).toFixed(1));
+  if (!bad && before.length < 2) return null;
+  return (
+    <div className="explainbox">
+      {bad && mv.kind && (
+        <p><b>{t('rev.whatHappened')}</b> {t('judge.why.' + mv.kind)}
+          {['hangs-piece', 'allows-tactic', 'allows-mate'].includes(mv.kind) && reply.length > 0 && <> {t('rev.afterYourMove')}: <span className="measured" dir="ltr">{reply.join(' ')}</span></>}
+        </p>
+      )}
+      {bad && mv.bestSan && mv.bestUci !== mv.uci && (
+        <p><b>{t('rev.youCouldPlay')}</b> <span className="measured" dir="ltr">{mv.bestSan}</span>{bestWhy ? ' — ' + bestWhy : ''}
+          {bestLine.length > 1 && <> <span className="measured muted" dir="ltr">{bestLine.join(' ')}</span></>}</p>
+      )}
+      {mine && bad && mv.kind && <p className="muted">{t('judge.principle')}: {t('kind.hint.' + mv.kind)}</p>}
+      {before.length > 0 && (
+        <details>
+          <summary>{t('rev.alternatives')}</summary>
+          <ul className="plain">{before.slice(0, 3).map((l: any, i: number) => (
+            <li key={i} className="measured" dir="ltr"><b>{pvToSan(fens[mv.ply], l.pv, 1)[0]}</b> {ev(l)} · {pvToSan(fens[mv.ply], l.pv, 5).join(' ')}</li>
+          ))}</ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export function Review({ id }: { id: number }) {
   const { data, error, loading, reload } = useApi<any>(`/games/${id}`);
   const [ply, setPly] = useState(0);
@@ -46,7 +81,7 @@ export function Review({ id }: { id: number }) {
 
   const fens = useMemo(() => {
     if (!g) return [new Chess().fen()];
-    const c = new Chess();
+    const c = g.start_fen ? new Chess(g.start_fen) : new Chess();
     const out = [c.fen()];
     for (const u of g.moves as string[]) {
       c.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u.length > 4 ? u[4] : undefined });
@@ -187,6 +222,7 @@ export function Review({ id }: { id: number }) {
                 )}
                 {mv.color === g.color && ['inaccuracy', 'mistake', 'blunder'].includes(mv.category) && <button className="btn btn-primary" onClick={() => startPractice(mv)}>{t('rev.practice')}</button>}
                 {mv.category === 'brilliant' && <span className="muted">{t('rev.sacrifice', { n: fmt1(mv.sacrifice, 0) })}</span>}
+                <MoveExplain mv={mv} review={review} fens={fens} mine={mv.color === g.color} />
               </div>
             )}
 

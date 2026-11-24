@@ -27,7 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 WORKDIR /app
 COPY --from=build /app /app
 COPY data/openings /app/openings
-COPY data/counters.json /app/data/counters.json
+COPY data/counters.json data/guide.json /app/data/
+ARG BUILD_SHA=dev
+ENV BUILD_SHA=$BUILD_SHA
 ENV NODE_ENV=production DATA_DIR=/data OPENINGS_DIR=/app/openings STOCKFISH_PATH=/usr/local/bin/stockfish PORT=3000
 VOLUME /data
 EXPOSE 3000

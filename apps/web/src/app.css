@@ -253,3 +253,30 @@ progress.stepbar::-moz-progress-bar { background: var(--color-accent); }
   .movecell, .sanbtn, .chip-btn, .countbtn, .moverow .movecell { min-height: 44px; }
   .sanbtn { padding-inline: var(--space-xs); }
 }
+
+/* puzzle set grid */
+.setbar { display: flex; justify-content: space-between; align-items: end; gap: var(--space-md); flex-wrap: wrap; }
+.setbar > div:first-child { display: grid; gap: var(--space-2xs); min-width: 240px; flex: 1; }
+.setgrid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: var(--space-xs); }
+.setcell { min-height: 44px; border: var(--rule-hair) solid var(--color-control-edge); border-radius: var(--radius-pill); background: var(--color-paper-2); color: var(--color-muted); cursor: pointer; font-family: var(--font-outlier); font-size: var(--text-sm); transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }
+.setcell:hover { border-color: var(--color-accent); color: var(--color-ink); }
+.setcell.is-solved { background: var(--color-ok-soft); color: var(--color-ok); border-color: transparent; }
+.setcell.is-failed { background: var(--color-bad-soft); color: var(--color-bad); border-color: transparent; }
+.hinttext { padding: var(--space-xs) var(--space-sm); border: var(--rule-hair) solid var(--color-cool); border-radius: var(--radius-pill); background: var(--color-cool-soft); margin: 0; }
+.judge h3 { margin-block-end: var(--space-xs); }
+.judge details { margin-block-start: var(--space-xs); }
+.judge summary { cursor: pointer; color: var(--color-muted); min-height: 32px; display: flex; align-items: center; }
+.learned p { margin-block: var(--space-2xs); }
+@media (max-width: 40rem) { .setgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+/* opening guide */
+ul.bullets { margin: var(--space-xs) 0 0; padding-inline-start: var(--space-lg); display: grid; gap: var(--space-2xs); }
+.guidebox { display: grid; gap: var(--space-xs); }
+.guidebox p { margin: 0; }
+.branchbox { padding: var(--space-xs) var(--space-sm); border: var(--rule-hair) solid var(--color-rule-2); border-radius: var(--radius-pill); background: var(--color-paper-3); }
+.fam details { margin-block: var(--space-2xs); }
+.fam summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--color-muted); }
+
+.explainbox { flex-basis: 100%; display: grid; gap: var(--space-xs); }
+.explainbox p { margin: 0; }
+.explainbox details summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--color-muted); }

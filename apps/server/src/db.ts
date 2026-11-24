@@ -108,6 +108,18 @@ CREATE TABLE IF NOT EXISTS lib_puzzles (
 );
 CREATE INDEX IF NOT EXISTS lib_puzzles_rating ON lib_puzzles(rating);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS puzzle_sets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  release TEXT NOT NULL, created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS puzzle_set_items (
+  set_id INTEGER NOT NULL REFERENCES puzzle_sets(id) ON DELETE CASCADE,
+  idx INTEGER NOT NULL, puzzle_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'new',          -- new | solved | failed
+  attempts INTEGER NOT NULL DEFAULT 0, updated_at INTEGER,
+  PRIMARY KEY (set_id, idx)
+);
 CREATE TABLE IF NOT EXISTS lib_attempts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -140,6 +152,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 // migrations for databases created by earlier versions
 try { db.exec('ALTER TABLE move_stats ADD COLUMN kind TEXT'); } catch { /* already there */ }
+try { db.exec('ALTER TABLE games ADD COLUMN start_fen TEXT'); } catch { /* already there */ }
 try { db.exec('ALTER TABLE reviews ADD COLUMN version INTEGER DEFAULT 1'); } catch { /* already there */ }
 
 export function tx<T>(fn: () => T): T {

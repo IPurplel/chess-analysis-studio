@@ -103,6 +103,25 @@ describe('API security and isolation', () => {
     expect((await call('/api/login', '', { name: 'Doomed', pin: '4321' })).status).toBe(404);
     expect((await call('/api/me', c)).status).toBe(401);
   });
+  it('saves a bot game for review, only for its owner, and validates it', async () => {
+    const r = await call('/api/profiles', '', { name: 'Botty' });
+    const c = r.cookie;
+    expect((await call('/api/games/bot', c, { moves: ['e2e4'], color: 'w', elo: 800 })).status).toBe(400);
+    expect((await call('/api/games/bot', c, { moves: ['e2e4', 'e2e4'], color: 'w', elo: 800 })).status).toBe(400); // illegal
+    const ok = await call('/api/games/bot', c, { moves: ['e2e4', 'e7e5', 'g1f3', 'b8c6'], color: 'b', elo: 1100 });
+    expect(ok.status).toBe(200);
+    const g = await call(`/api/games/${ok.json.id}`, c);
+    expect(g.json.game).toMatchObject({ provider: 'bot', color: 'b', time_class: 'bot' });
+    expect(g.json.game.moves).toHaveLength(4);
+    expect((await call(`/api/games/${ok.json.id}`, '')).status).toBe(401);
+  });
+  it('judge needs an engine and a legal request; puzzle sets wait for the library', async () => {
+    const r = await call('/api/profiles', '', { name: 'Judy' });
+    const c = r.cookie;
+    expect((await call('/api/judge', c, { fen: 'nope', uci: 'e2e4' })).status).toBe(400);
+    expect((await call('/api/judge', c, { fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', uci: 'e2e4' })).status).toBe(503);
+    expect((await call('/api/sets/current', c)).json.ready).toBe(false);
+  });
   it('rejects a bad FEN before it can reach the engine', async () => {
     expect((await call('/api/bot/move', b, { fen: 'not a fen', elo: 800 })).status).toBe(400);
   });

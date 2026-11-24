@@ -22,6 +22,7 @@ if [ -d .git ]; then
   git merge --ff-only -q origin/main
 fi
 HEAD_SHA="$(git rev-parse HEAD 2>/dev/null || echo none)"
+export BUILD_SHA="${HEAD_SHA:0:7}"   # a new release gives every profile a fresh set of puzzles
 
 # "up to date" means the *running* version is this commit, not merely that the files were pulled:
 # a build that failed earlier must be retried (but at most 3 times per commit).
