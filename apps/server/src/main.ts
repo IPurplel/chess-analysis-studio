@@ -101,6 +101,21 @@ app.post('/api/login', async (req, reply) => {
   return { ok: true };
 });
 
+/** Delete the signed-in profile and everything it owns (accounts, games, analyses, puzzles, progress). */
+app.delete('/api/profile', async (req, reply) => {
+  const p = (req as any).profile as { id: number };
+  const { pin } = (req.body ?? {}) as { pin?: string };
+  const row = db.prepare('SELECT * FROM profiles WHERE id=?').get(p.id) as any;
+  if (row?.pin_hash) {
+    if (limited(`pin:${req.ip}:${p.id}`, 8, 10 * 60_000)) return reply.code(429).send({ error: 'محاولات كثيرة، انتظر 10 دقائق' });
+    const given = Buffer.from(hashPin(String(pin ?? ''), row.pin_salt), 'hex');
+    if (!timingSafeEqual(given, Buffer.from(row.pin_hash, 'hex'))) return reply.code(403).send({ error: 'الرمز غير صحيح' });
+  }
+  db.prepare('DELETE FROM profiles WHERE id=?').run(p.id); // ON DELETE CASCADE removes the rest
+  reply.clearCookie('sid', { path: '/' });
+  return { ok: true };
+});
+
 app.post('/api/logout', async (req, reply) => {
   const sid = (req as any).cookies?.sid;
   if (sid) db.prepare('DELETE FROM sessions WHERE sid=?').run(sid);
@@ -134,7 +149,8 @@ app.get('/api/me', async (req) => {
     ratingsFor(p.id),
     new Promise<null>((r) => setTimeout(() => r(null), 2000)),
   ]);
-  return { profile: p, accounts, ratings };
+  const hasPin = !!(db.prepare('SELECT pin_hash FROM profiles WHERE id=?').get(p.id) as any)?.pin_hash;
+  return { profile: { ...p, hasPin }, accounts, ratings };
 });
 
 app.post('/api/accounts', async (req, reply) => {

@@ -45,6 +45,16 @@ export function Settings({ me, reloadMe }: { me: any; reloadMe: () => void }) {
         <p className="muted">{t('set.queue', { done: num(by.done ?? 0), pending: num((by.pending ?? 0) + (by.running ?? 0)) })}{by.error ? ` · ${t('set.queueErr', { n: by.error })}` : ''}</p>
       </section>
       <section className="panel">
+        <h2>{t('set.danger')}</h2>
+        <p className="muted">{t('set.dangerHint')}</p>
+        <button className="btn" onClick={async () => {
+          if (!window.confirm(t('set.deleteConfirm'))) return;
+          const pin = me.profile.hasPin ? window.prompt(t('set.deletePin')) ?? '' : undefined;
+          try { await api('/profile', { method: 'DELETE', body: { pin: pin ?? '' } }); location.reload(); }
+          catch (e: any) { setMsg(e.message); }
+        }}>{t('set.delete')}</button>
+      </section>
+      <section className="panel">
         <h2>{t('set.library')}</h2>
         <p className="muted">{lib.data?.status === 'done' ? t('set.libCount', { n: num(lib.data.count) }) : lib.data?.message || '…'}</p>
         {lib.data && lib.data.status !== 'done' && lib.data.status !== 'downloading' && (

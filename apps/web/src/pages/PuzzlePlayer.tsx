@@ -20,7 +20,8 @@ const sq = (u: string) => [u.slice(0, 2), u.slice(2, 4)] as const;
 export function PuzzlePlayer({ puzzle, onResult, onNext }: { puzzle: PuzzleData; onResult: (r: PuzzleResult) => void; onNext: () => void }) {
   const [fen, setFen] = useState(puzzle.fen);
   const [step, setStep] = useState(0);
-  const [hints, setHints] = useState(0);
+  const [hints, setHints] = useState(0); // total hints used (affects the rating)
+  const [stepHint, setStepHint] = useState(0); // hint level shown for the current step only
   const [wrong, setWrong] = useState(false);
   const [status, setStatus] = useState<'play' | 'solved' | 'revealed'>('play');
   const [msg, setMsg] = useState<{ tone: 'ok' | 'bad' | 'info'; text: string } | null>(null);
@@ -55,6 +56,8 @@ export function PuzzlePlayer({ puzzle, onResult, onNext }: { puzzle: PuzzleData;
         play(c2, puzzle.solution[step + 1]);
         setFen(c2.fen());
         setStep(step + 2);
+        setStepHint(0);
+        setStepHint(0);
         if (step + 2 >= puzzle.solution.length) { setStatus('solved'); setMsg({ tone: 'ok', text: t('pz.solved') }); if (!wrong) report(true); }
       }, 450);
     } else {
@@ -69,7 +72,7 @@ export function PuzzlePlayer({ puzzle, onResult, onNext }: { puzzle: PuzzleData;
   const expected = puzzle.solution[step];
   const arrows = [] as { from: string; to?: string; brush: 'green' | 'blue' }[];
   if (status === 'revealed' && expected) arrows.push({ from: sq(expected)[0], to: sq(expected)[1], brush: 'green' });
-  else if (hints >= 1 && expected) arrows.push(hints >= 2 ? { from: sq(expected)[0], to: sq(expected)[1], brush: 'blue' } : { from: sq(expected)[0], brush: 'blue' });
+  else if (stepHint >= 1 && expected) arrows.push(stepHint >= 2 ? { from: sq(expected)[0], to: sq(expected)[1], brush: 'blue' } : { from: sq(expected)[0], brush: 'blue' });
 
   return (
     <div className="train">
@@ -81,7 +84,7 @@ export function PuzzlePlayer({ puzzle, onResult, onNext }: { puzzle: PuzzleData;
         )}
         {msg && <p role="status" className={`fb fb-${msg.tone}`}>{msg.text}</p>}
         <div className="btnrow">
-          {status === 'play' && <button className="btn" disabled={hints >= 2} onClick={() => setHints((h) => h + 1)}>{t('pz.hint')}{hints ? ` (${hints}/2)` : ''}</button>}
+          {status === 'play' && <button className="btn" disabled={stepHint >= 2} onClick={() => { setHints((h) => h + 1); setStepHint((h) => h + 1); }}>{t('pz.hint')}{stepHint ? ` (${stepHint}/2)` : ''}</button>}
           {status === 'play' && <button className="btn btn-quiet" onClick={reveal}>{t('pz.solution')}</button>}
           {status !== 'play' && <button className="btn btn-primary" onClick={onNext} autoFocus>{t('pz.next')}</button>}
         </div>

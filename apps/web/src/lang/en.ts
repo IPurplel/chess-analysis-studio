@@ -105,6 +105,8 @@ export const en: Record<string, string> = {
   'set.sync': 'Sync games', 'set.syncing': 'Fetching…', 'set.queue': 'Analysis queue: {done} done · {pending} waiting', 'set.queueErr': '{n} errors',
   'set.library': 'Puzzle library', 'set.language': 'Language', 'set.syncAndAnalyse': 'Sync and analysis',
   'set.libCount': '{n} puzzles ready',
+  'set.danger': 'Delete profile', 'set.dangerHint': 'Permanently removes your accounts, games, analyses and training from this server.',
+  'set.delete': 'Delete my profile and all my data', 'set.deleteConfirm': 'Your profile and all its data will be deleted permanently. This cannot be undone. Sure?', 'set.deletePin': 'Enter your PIN to confirm',
 
   'sp.honest.gap': 'Going from {from} to {to} in {days} days is not realistic. A practical goal for your contest: cut blunders from {now} per game to under {goal}; that is the fastest way to lift your results.',
   'sp.honest.ok': 'Focus on consistency; every task is short and specific.',

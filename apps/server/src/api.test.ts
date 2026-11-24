@@ -95,6 +95,14 @@ describe('API security and isolation', () => {
     expect((await call(`/api/games/${gid}/analyse`, b, {})).status).toBe(200); // no-op for another profile
     expect((await call('/api/stats?tc=all', b)).json.totals.games).toBe(0);
   });
+  it('deletes a profile with all its data, but only with the right PIN', async () => {
+    const r = await call('/api/profiles', '', { name: 'Doomed', pin: '4321' });
+    const c = r.cookie;
+    expect((await call('/api/profile', c, { pin: '0000' }, 'DELETE')).status).toBe(403);
+    expect((await call('/api/profile', c, { pin: '4321' }, 'DELETE')).status).toBe(200);
+    expect((await call('/api/login', '', { name: 'Doomed', pin: '4321' })).status).toBe(404);
+    expect((await call('/api/me', c)).status).toBe(401);
+  });
   it('rejects a bad FEN before it can reach the engine', async () => {
     expect((await call('/api/bot/move', b, { fen: 'not a fen', elo: 800 })).status).toBe(400);
   });
