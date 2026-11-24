@@ -5,3 +5,5 @@ data/*.sqlite*
 apps/web/dist
 *.tar.gz
 .env
+.last-good
+.fail-count

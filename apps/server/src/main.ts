@@ -345,13 +345,11 @@ if (existsSync(webDist)) {
   app.setNotFoundHandler((req, reply) => (req.url.startsWith('/api/') ? reply.code(404).send({ error: 'not found' }) : reply.sendFile('index.html')));
 }
 
-{
-  const n = rereviewOutdated();
-  if (n) console.log(`re-classified ${n} stored analyses with the current rules`);
-}
 const port = Number(process.env.PORT) || 3000;
 await app.listen({ port, host: '0.0.0.0' });
 console.log(`Chess Analysis Studio on http://0.0.0.0:${port}`);
+// after the server is already answering: re-classify stored analyses made with older rules (no engine needed)
+rereviewOutdated().then((n) => { if (n) console.log(`re-classified ${n} stored analyses with the current rules`); }).catch((e) => console.error('re-review error', e));
 ensureLibrary();
 if (process.env.NO_ENGINE !== '1') {
   startWorker().then(() => console.log('engine pool ready')).catch((e) => console.error('engine failed:', e.message));

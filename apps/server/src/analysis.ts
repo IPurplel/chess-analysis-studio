@@ -73,18 +73,20 @@ function persist(g: any, evals: PositionEval[], fens: string[], withPuzzles: boo
 }
 
 /** After a rules change (REVIEW_VERSION bump) re-classify stored analyses. Needs no engine. */
-export function rereviewOutdated(): number {
-  const rows = db.prepare('SELECT game_id, json FROM reviews WHERE COALESCE(version,1) < ?').all(REVIEW_VERSION) as { game_id: number; json: string }[];
-  for (const r of rows) {
-    const g = db.prepare('SELECT * FROM games WHERE id=?').get(r.game_id) as any;
-    if (!g) continue;
+export async function rereviewOutdated(): Promise<number> {
+  const ids = db.prepare('SELECT game_id FROM reviews WHERE COALESCE(version,1) < ?').all(REVIEW_VERSION) as { game_id: number }[];
+  for (const { game_id } of ids) {
+    const g = db.prepare('SELECT * FROM games WHERE id=?').get(game_id) as any;
+    const r = db.prepare('SELECT json FROM reviews WHERE game_id=?').get(game_id) as { json: string } | undefined;
+    if (!g || !r) continue;
     try {
       persist(g, JSON.parse(r.json).evals as PositionEval[], [], false);
     } catch (e) {
-      console.error('re-review failed for game', r.game_id, (e as Error).message);
+      console.error('re-review failed for game', game_id, (e as Error).message);
     }
+    await new Promise((res) => setImmediate(res)); // never starve the web server: it must answer health checks while this runs
   }
-  return rows.length;
+  return ids.length;
 }
 
 export async function startWorker() {
