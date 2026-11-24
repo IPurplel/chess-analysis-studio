@@ -1,0 +1,6 @@
+**/node_modules
+.git
+data/bin
+data/*.sqlite*
+apps/web/dist
+*.tar.gz

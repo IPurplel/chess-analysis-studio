@@ -1,0 +1,17 @@
+services:
+  studio:
+    build: .
+    image: ${STUDIO_IMAGE:-chess-analysis-studio:latest}
+    container_name: chess-studio
+    ports:
+      - "3000:3000"
+    volumes:
+      - studio-data:/data
+    environment:
+      # ENGINE_WORKERS: "4"        # Stockfish processes (default: min(4, cores-1))
+      # ANALYSIS_MOVETIME: "250"   # ms per position; higher = deeper but slower
+      TZ: Asia/Riyadh
+    restart: unless-stopped
+
+volumes:
+  studio-data:
