@@ -10,7 +10,8 @@ curl -fsSL https://raw.githubusercontent.com/IPurplel/chess-analysis-studio/main
 
 - حاوية LXC على Proxmox: فعّل على المضيف `pct set <ID> --features nesting=1,keyctl=1` ثم أعد تشغيلها قبل التثبيت.
 - أسرع على سيرفر ضعيف (صورة جاهزة بدل البناء): `STUDIO_IMAGE=ghcr.io/ipurplel/chess-analysis-studio:latest` قبل الأمر (تأكد أن حزمة الصورة عامة في GitHub).
-- التحديث: `bash /opt/chess-analysis-studio/deploy/update.sh` (البيانات محفوظة في volume).
+- **تحديث تلقائي:** المثبّت يفعّل مؤقتًا (systemd) يفحص GitHub كل 10 دقائق؛ عند وجود نسخة جديدة يسحبها ويعيد بناء الحاوية ويشغّلها. إن فشل تشغيل النسخة الجديدة يرجع للسابقة تلقائيًا. بعد كل تحديث يحذف الصور القديمة وكاش البناء الزائد (لا يمس بياناتك ولا صور أخرى على الجهاز). السجل: `/var/log/chess-studio-update.log`. للإيقاف: `systemctl disable --now chess-studio-update.timer` أو ثبّت بـ `AUTO_UPDATE=0`.
+- تحديث فوري يدويًا: `bash /opt/chess-analysis-studio/deploy/update.sh` (البيانات محفوظة في volume).
 - نسخ احتياطي: `docker run --rm -v chess-analysis-studio_studio-data:/d -v $PWD:/b busybox tar czf /b/studio-backup.tgz -C /d .`
 - خلف HTTPS (Caddy/Nginx): ضع `COOKIE_SECURE=1` في بيئة الخدمة.
 

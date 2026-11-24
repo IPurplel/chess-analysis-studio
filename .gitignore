@@ -3,3 +3,4 @@ apps/web/dist
 data/bin
 data/*.sqlite*
 *.tar.gz
+.env

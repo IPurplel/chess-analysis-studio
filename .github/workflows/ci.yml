@@ -19,6 +19,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Shell scripts parse
+        run: for f in deploy/*.sh; do bash -n "$f"; done
       - run: npm ci
       - run: npm test
       - run: npm run build
