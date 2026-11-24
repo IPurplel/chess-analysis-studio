@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Chess } from 'chess.js';
-import { Board } from './Board';
-import { api, useApi, CATEGORY_AR, CATEGORY_MARK, PHASE_AR, fmt1, dateAr } from './api';
+import { Board } from '../Board';
+import { api, useApi, catName, CATEGORY_MARK, fmt1 } from '../api';
+import { t, dateLocal } from '../i18n';
+import { ErrorBox, Loading } from '../ui';
+import { KIND_THEME } from './Insights';
 
 const CATS = ['brilliant', 'great', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'blunder'];
 
@@ -12,16 +15,14 @@ function EvalChart({ win, ply, onPick, orientation }: { win: number[]; ply: numb
   const val = (v: number) => (orientation === 'w' ? v : 100 - v);
   const y = (v: number) => H - (val(v) / 100) * H;
   const pts = win.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const area = `0,${H} ${pts} ${W},${H}`;
   return (
-    <svg className="evalchart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="منحنى التقييم عبر المباراة"
+    <svg className="evalchart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={t('rev.eval')}
       onClick={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
-        const rel = (e.clientX - r.left) / r.width;
         // SVG x runs left-to-right even on an RTL page, and ply 0 is drawn at x = 0
-        onPick(Math.max(0, Math.min(n, Math.round(rel * n))));
+        onPick(Math.max(0, Math.min(n, Math.round(((e.clientX - r.left) / r.width) * n))));
       }}>
-      <polygon points={area} className="evalchart-area" />
+      <polygon points={`0,${H} ${pts} ${W},${H}`} className="evalchart-area" />
       <line x1="0" x2={W} y1={H / 2} y2={H / 2} className="evalchart-mid" />
       <polyline points={pts} className="evalchart-line" vectorEffect="non-scaling-stroke" />
       <line x1={x(ply)} x2={x(ply)} y1="0" y2={H} className="evalchart-cursor" vectorEffect="non-scaling-stroke" />
@@ -50,9 +51,11 @@ export function Review({ id }: { id: number }) {
   useEffect(() => { setPly(0); }, [id]);
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
-      if (e.key === 'ArrowLeft') setPly((p) => Math.min(max, p + 1));
-      else if (e.key === 'ArrowRight') setPly((p) => Math.max(0, p - 1));
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT') return;
+      const dir = document.documentElement.dir === 'rtl' ? -1 : 1;
+      if (e.key === 'ArrowLeft') setPly((p) => Math.max(0, Math.min(max, p + dir)));
+      else if (e.key === 'ArrowRight') setPly((p) => Math.max(0, Math.min(max, p - dir)));
       else if (e.key === 'Home') setPly(0);
       else if (e.key === 'End') setPly(max);
     };
@@ -60,15 +63,14 @@ export function Review({ id }: { id: number }) {
     return () => removeEventListener('keydown', f);
   }, [max]);
 
-  // while the engine is still working on this game, poll
   useEffect(() => {
     if (!g || review) return;
-    const t = setInterval(reload, 4000);
-    return () => clearInterval(t);
+    const timer = setInterval(reload, 4000);
+    return () => clearInterval(timer);
   }, [g, review, reload]);
 
-  if (loading && !data) return <div className="skeleton" style={{ height: 480 }} aria-busy="true" />;
-  if (error) return <div className="state state-error" role="alert"><h2>تعذّر تحميل المباراة</h2><p>{error}</p></div>;
+  if (loading && !data) return <Loading h={480} />;
+  if (error) return <ErrorBox msg={error} retry={reload} />;
   if (!g) return null;
 
   const mv = ply > 0 ? review?.moves?.[ply - 1] : null;
@@ -80,47 +82,44 @@ export function Review({ id }: { id: number }) {
   const orient = g.color === 'w' ? 'white' : 'black';
   const winW: number[] | undefined = review?.winWhite;
   const barWhite = winW ? winW[ply] : 50;
-
   const rows: any[] = [];
   if (review) for (let i = 0; i < review.moves.length; i += 2) rows.push([review.moves[i], review.moves[i + 1]]);
+  const oppName = g.color === 'w' ? g.black : g.white;
+  const oppRating = g.color === 'w' ? g.black_rating : g.white_rating;
+  const myName = g.color === 'w' ? g.white : g.black;
+  const myRating = g.color === 'w' ? g.white_rating : g.black_rating;
 
   return (
     <div className="review">
-      <section className="review-board" aria-label="اللوحة">
-        <div className="players">
-          <span>{g.color === 'w' ? g.black : g.white}</span>
-          <span className="measured">{g.color === 'w' ? g.black_rating : g.white_rating}</span>
-        </div>
+      <section className="review-board" aria-label="board">
+        <div className="players"><span>{oppName}</span><span className="measured">{oppRating}</span></div>
         <div className="boardrow">
-          <div className="evalbar" aria-label={`تقييم الأبيض ${fmt1(barWhite, 0)}٪`} title={`${fmt1(barWhite, 0)}% للأبيض`}>
-            <div className="evalbar-white" style={{ height: `${orient === 'white' ? barWhite : 100 - barWhite}%`, [orient === 'white' ? 'bottom' : 'top']: 0 }} />
+          <div className="evalbar" role="img" aria-label={`${fmt1(barWhite, 0)}%`} title={`${fmt1(barWhite, 0)}%`}>
+            <div className="evalbar-white" style={{ blockSize: `${orient === 'white' ? barWhite : 100 - barWhite}%`, [orient === 'white' ? 'insetBlockEnd' : 'insetBlockStart']: 0 }} />
           </div>
           <Board fen={fens[ply]} orientation={orient} lastMove={last} arrows={arrows} />
         </div>
-        <div className="players">
-          <span>{g.color === 'w' ? g.white : g.black} <small>(أنت)</small></span>
-          <span className="measured">{g.color === 'w' ? g.white_rating : g.black_rating}</span>
-        </div>
+        <div className="players"><span>{myName} <small>({t('common.you')})</small></span><span className="measured">{myRating}</span></div>
         <div className="navrow">
-          <button className="btn" onClick={() => setPly(0)} aria-label="البداية">«</button>
-          <button className="btn" onClick={() => setPly((p) => Math.max(0, p - 1))} aria-label="السابق">›</button>
+          <button className="btn" onClick={() => setPly(0)} aria-label={t('rev.start')}>«</button>
+          <button className="btn" onClick={() => setPly((p) => Math.max(0, p - 1))} aria-label={t('rev.prev')}>‹</button>
           <span className="measured navrow-pos">{ply} / {max}</span>
-          <button className="btn" onClick={() => setPly((p) => Math.min(max, p + 1))} aria-label="التالي">‹</button>
-          <button className="btn" onClick={() => setPly(max)} aria-label="النهاية">»</button>
+          <button className="btn" onClick={() => setPly((p) => Math.min(max, p + 1))} aria-label={t('rev.next')}>›</button>
+          <button className="btn" onClick={() => setPly(max)} aria-label={t('rev.end')}>»</button>
         </div>
       </section>
 
       <section className="review-side">
         <header className="review-head">
-          <h1>{g.opening || 'مباراة'}</h1>
-          <p className="muted">{dateAr(g.played_at)} · {g.time_class} · {g.result === 'W' ? 'فوز' : g.result === 'L' ? 'خسارة' : 'تعادل'}{g.url ? <> — <a href={g.url} target="_blank" rel="noreferrer">المصدر</a></> : null}</p>
+          <h1>{g.opening || '—'}</h1>
+          <p className="muted">{dateLocal(g.played_at)} · {g.time_class} · {g.result === 'W' ? t('rev.win') : g.result === 'L' ? t('rev.lose') : t('rev.draw')}{g.url ? <> — <a href={g.url} target="_blank" rel="noreferrer">{t('common.source')}</a></> : null}</p>
         </header>
 
         {!review && (
           <div className="state" role="status">
-            <h2>{g.status === 'running' ? 'المحرك يحلل المباراة الآن' : 'في طابور التحليل'}</h2>
-            <p>تظهر النتائج هنا تلقائيًا. يمكنك رفع أولويتها.</p>
-            <button className="btn btn-primary" onClick={() => api(`/games/${id}/analyse`, { method: 'POST', body: {} }).then(reload)}>حلّلها الآن</button>
+            <h2>{g.status === 'running' ? t('rev.analysing') : t('rev.queued')}</h2>
+            <p>{t('rev.queuedHint')}</p>
+            <button className="btn btn-primary" onClick={() => api(`/games/${id}/analyse`, { method: 'POST', body: {} }).then(reload)}>{t('rev.analyseNow')}</button>
           </div>
         )}
 
@@ -129,33 +128,34 @@ export function Review({ id }: { id: number }) {
             <div className="accrow">
               {(['w', 'b'] as const).map((c) => (
                 <div key={c} className="panel acc">
-                  <span className="label">{c === 'w' ? 'الأبيض' : 'الأسود'}{g.color === c ? ' (أنت)' : ''}</span>
+                  <span className="label">{t(c === 'w' ? 'common.white' : 'common.black')}{g.color === c ? ` (${t('common.you')})` : ''}</span>
                   <span className="reading">{fmt1(review.accuracy[c], 0)}<small>%</small></span>
-                  <span className="label">دقة</span>
+                  <span className="label">{t('common.accuracy')}</span>
                 </div>
               ))}
             </div>
 
-            <div className="panel">
-              <EvalChart win={review.winWhite} ply={ply} onPick={setPly} orientation={g.color} />
-            </div>
+            <div className="panel"><EvalChart win={review.winWhite} ply={ply} onPick={setPly} orientation={g.color} /></div>
 
             {mv && (
               <div className={`panel movedetail cat-${mv.category}`} aria-live="polite">
-                <strong>{mv.san}</strong>
-                <span className={`chip chip-${mv.category}`}>{CATEGORY_MARK[mv.category]} {CATEGORY_AR[mv.category]}</span>
-                <span className="muted">دقة <b className="measured">{fmt1(mv.accuracy, 0)}</b> · خسارة <b className="measured">{fmt1(mv.loss)}</b> نقطة فوز</span>
-                {mv.bestSan && mv.bestUci !== mv.uci && <span>الأفضل: <b className="measured">{mv.bestSan}</b></span>}
-                {mv.category === 'brilliant' && <span className="muted">تضحية بمادة {fmt1(mv.sacrifice, 0)} مع بقاء الوضع سليمًا</span>}
+                <strong dir="ltr">{mv.san}</strong>
+                <span className={`chip chip-${mv.category}`}>{CATEGORY_MARK[mv.category]} {catName(mv.category)}</span>
+                <span className="muted">{t('common.accuracy')} <b className="measured">{fmt1(mv.accuracy, 0)}</b> · {t('rev.loss')} <b className="measured">{fmt1(mv.loss)}</b> {t('rev.winPts')}</span>
+                {mv.bestSan && mv.bestUci !== mv.uci && <span>{t('rev.best')}: <b className="measured" dir="ltr">{mv.bestSan}</b></span>}
+                {mv.kind && (
+                  <span className="kindrow">{t('rev.whyBad')}: <b>{t('kind.' + mv.kind)}</b>{mv.color === g.color && <> <a className="btn btn-quiet" href={`#/puzzles?theme=${KIND_THEME[mv.kind] ?? ''}`}>{t('rev.trainKind')}</a></>}</span>
+                )}
+                {mv.category === 'brilliant' && <span className="muted">{t('rev.sacrifice', { n: fmt1(mv.sacrifice, 0) })}</span>}
               </div>
             )}
 
             <div className="panel">
               <table className="table counts">
-                <thead><tr><th>النوع</th><th className="num">الأبيض</th><th className="num">الأسود</th></tr></thead>
+                <thead><tr><th>{t('rev.type')}</th><th className="num">{t('common.white')}</th><th className="num">{t('common.black')}</th></tr></thead>
                 <tbody>
                   {CATS.map((c) => (
-                    <tr key={c}><td><span className={`chip chip-${c}`}>{CATEGORY_MARK[c]} {CATEGORY_AR[c]}</span></td>
+                    <tr key={c}><td><span className={`chip chip-${c}`}>{CATEGORY_MARK[c]} {catName(c)}</span></td>
                       <td className="num measured">{review.counts.w[c]}</td><td className="num measured">{review.counts.b[c]}</td></tr>
                   ))}
                 </tbody>
@@ -164,17 +164,17 @@ export function Review({ id }: { id: number }) {
 
             <div className="panel">
               <table className="table">
-                <thead><tr><th>مرحلة</th><th className="num">الأبيض</th><th className="num">الأسود</th></tr></thead>
+                <thead><tr><th>{t('rev.phase')}</th><th className="num">{t('common.white')}</th><th className="num">{t('common.black')}</th></tr></thead>
                 <tbody>
                   {(['opening', 'middlegame', 'endgame'] as const).map((p) => (
-                    <tr key={p}><td>{PHASE_AR[p]}</td>
+                    <tr key={p}><td>{t('phase.' + p)}</td>
                       <td className="num measured">{fmt1(review.phaseAccuracy.w[p], 0)}</td><td className="num measured">{fmt1(review.phaseAccuracy.b[p], 0)}</td></tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="panel movelist" role="list" aria-label="النقلات">
+            <div className="panel movelist" role="list" aria-label={t('rev.moves')}>
               {rows.map((r, i) => (
                 <div className="moverow" key={i} role="listitem">
                   <span className="measured movenum">{i + 1}</span>

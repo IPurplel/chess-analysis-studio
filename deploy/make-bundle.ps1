@@ -8,6 +8,6 @@ if (Test-Path $out) { Remove-Item $out }
 & "$env:SystemRoot\System32\tar.exe" -czf $out `
   --exclude='node_modules' --exclude='.git' --exclude='data/bin' --exclude='data/*.sqlite*' `
   --exclude='apps/web/dist' --exclude='*.tar.gz' `
-  package.json package-lock.json Dockerfile docker-compose.yml .dockerignore README.md packages apps data/openings deploy
+  package.json package-lock.json Dockerfile docker-compose.yml .dockerignore README.md packages apps data/openings data/counters.json deploy
 if ($LASTEXITCODE -ne 0) { throw "tar failed ($LASTEXITCODE)" }
 Write-Host "Created $((Resolve-Path $out).Path) ($([math]::Round((Get-Item $out).Length/1MB,2)) MB)"

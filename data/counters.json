@@ -1,0 +1,110 @@
+{
+  "note": "خطوط تعليمية مقترحة لمستوى المبتدئ والمتوسط؛ كل سطر يُتحقق آليًا أنه قانوني. ليست مرجعًا نظريًا كاملًا.",
+  "families": [
+    {
+      "id": "sicilian", "name": "Sicilian Defense", "owner": "b", "start": "1.e4 c5",
+      "idea": "الأسود يلعب c5 ليكسر تماثل الوسط. الأبيض يختار بين خطط هادئة وهجومية.",
+      "lines": [
+        { "id": "alapin", "name": "Alapin (2.c3)", "san": "e4 c5 c3 d5 exd5 Qxd5 d4 Nf6 Nf3 e6 Be2 Nc6 O-O", "idea": "الأبيض يبني مركزًا قويًا بـ c3 وd4 ويتجنب النظرية الحادة." },
+        { "id": "closed", "name": "Closed (2.Nc3)", "san": "e4 c5 Nc3 Nc6 g3 g6 Bg2 Bg7 d3 d6 Be3 e6", "idea": "تطوير هادئ بالفيل في g2 ثم هجوم على الجناح." },
+        { "id": "open", "name": "Open (2.Nf3 ... 3.d4)", "san": "e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6", "idea": "النظام الرئيسي: تبادل في d4 وصراع على المركز." },
+        { "id": "morra", "name": "Smith-Morra Gambit", "san": "e4 c5 d4 cxd4 c3 dxc3 Nxc3 Nc6 Nf3 d6 Bc4 e6 O-O Nf6 Qe2 Be7", "idea": "تضحية بيدق مقابل تطوير سريع وخطوط مفتوحة." }
+      ]
+    },
+    {
+      "id": "french", "name": "French Defense", "owner": "b", "start": "1.e4 e6",
+      "idea": "الأسود يبني بيدقين متراصين ويضرب المركز بـ d5. الأبيض يختار بين التبادل والتقدم.",
+      "lines": [
+        { "id": "advance", "name": "Advance (3.e5)", "san": "e4 e6 d4 d5 e5 c5 c3 Nc6 Nf3 Qb6 a3 Nh6 b4 cxd4 cxd4 Nf5", "idea": "الأبيض يكسب مساحة، والأسود يهاجم قاعدة سلسلة البيادق d4." },
+        { "id": "exchange", "name": "Exchange (3.exd5)", "san": "e4 e6 d4 d5 exd5 exd5 Nf3 Nf6 Bd3 Bd6 O-O O-O Bg5 Bg4", "idea": "مركز متماثل وبسيط؛ تطوير سريع ولعب هادئ." },
+        { "id": "tarrasch", "name": "Tarrasch (3.Nd2)", "san": "e4 e6 d4 d5 Nd2 Nf6 e5 Nfd7 Bd3 c5 c3 Nc6 Ne2 cxd4 cxd4 f6", "idea": "الحصان في d2 يحمي e4 ويبقي التوتر في المركز." }
+      ]
+    },
+    {
+      "id": "caro-kann", "name": "Caro-Kann Defense", "owner": "b", "start": "1.e4 c6",
+      "idea": "دفاع صلب: الأسود يعد d5 ويحفظ الفيل المعاكس للبيادق خارج السلسلة.",
+      "lines": [
+        { "id": "advance", "name": "Advance (3.e5)", "san": "e4 c6 d4 d5 e5 Bf5 Nf3 e6 Be2 c5 Be3 Nd7 O-O Ne7", "idea": "الفيل يخرج قبل e6 ثم ضرب القاعدة بـ c5." },
+        { "id": "exchange", "name": "Exchange (3.exd5)", "san": "e4 c6 d4 d5 exd5 cxd5 Bd3 Nc6 c3 Nf6 Bf4 Bg4 Qb3 Qd7 Nd2 e6", "idea": "بنية متماثلة مع أفضلية تطوير بسيطة للأبيض." },
+        { "id": "classical", "name": "Classical (3.Nc3)", "san": "e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6 h4 h6 Nf3 Nd7 h5 Bh7", "idea": "الفيل يهرب إلى h7 والأسود يمتلك بنية سليمة." }
+      ]
+    },
+    {
+      "id": "scandinavian", "name": "Scandinavian Defense", "owner": "b", "start": "1.e4 d5",
+      "idea": "الأسود يضرب e4 فورًا. الملكة تخرج مبكرًا لذا يجب تطوير القطع بسرعة.",
+      "lines": [
+        { "id": "main", "name": "Main (3.Nc3 Qa5)", "san": "e4 d5 exd5 Qxd5 Nc3 Qa5 d4 Nf6 Nf3 c6 Bc4 Bf5 Bd2 e6", "idea": "الملكة على a5 والأبيض يطوّر ويستغل الوقت." },
+        { "id": "modern", "name": "Modern (2...Nf6)", "san": "e4 d5 exd5 Nf6 d4 Nxd5 Nf3 g6 Be2 Bg7 O-O O-O c4 Nb6", "idea": "استعادة البيدق بالحصان بدل الملكة." }
+      ]
+    },
+    {
+      "id": "italian", "name": "Italian Game", "owner": "w", "start": "1.e4 e5 2.Nf3 Nc6 3.Bc4",
+      "idea": "الأبيض يوجه الفيل إلى f7 ويطوّر بسرعة. الأسود يجب أن يرد بدقة.",
+      "lines": [
+        { "id": "giuoco", "name": "Giuoco Pianissimo (4.c3 / 5.d3)", "san": "e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3 d6 O-O O-O Re1 a6 Bb3 Ba7", "idea": "لعب هادئ: d3 وبناء مركز تدريجي." },
+        { "id": "two-knights", "name": "Two Knights (3...Nf6 4.Ng5)", "san": "e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Na5 Bb5+ c6 dxc6 bxc6 Be2 h6 Nf3 e4 Ne5 Bd6", "idea": "هجوم حاد: الأسود يضحي ببيدق مقابل نشاط." }
+      ]
+    },
+    {
+      "id": "ruy-lopez", "name": "Ruy Lopez", "owner": "w", "start": "1.e4 e5 2.Nf3 Nc6 3.Bb5",
+      "idea": "الأبيض يضغط على الحصان المدافع عن e5. من أقدم وأغنى الافتتاحيات.",
+      "lines": [
+        { "id": "closed", "name": "Closed (Breyer)", "san": "e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7", "idea": "الأسود يعيد الحصان إلى d7 بنظام متين." },
+        { "id": "exchange", "name": "Exchange (4.Bxc6)", "san": "e4 e5 Nf3 Nc6 Bb5 a6 Bxc6 dxc6 O-O f6 d4 exd4 Nxd4 c5 Nb3 Qxd1 Rxd1 Bg4", "idea": "بنية أفضل للأبيض في النهاية؛ الأسود لديه فيلان." }
+      ]
+    },
+    {
+      "id": "scotch", "name": "Scotch Game", "owner": "w", "start": "1.e4 e5 2.Nf3 Nc6 3.d4",
+      "idea": "الأبيض يفتح المركز مبكرًا بتبادل d4.",
+      "lines": [
+        { "id": "mieses", "name": "Mieses (5.Nxc6 ... 6.e5)", "san": "e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Nf6 Nxc6 bxc6 e5 Qe7 Qe2 Nd5 c4 Ba6", "idea": "الأبيض يطرد الحصان والأسود يضغط على الجناح." }
+      ]
+    },
+    {
+      "id": "qg", "name": "Queen's Gambit", "owner": "w", "start": "1.d4 d5 2.c4",
+      "idea": "الأبيض يعرض بيدق c لجذب بيدق d الأسود والسيطرة على المركز.",
+      "lines": [
+        { "id": "declined", "name": "Declined (2...e6)", "san": "d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6 Bh4 b6", "idea": "الأسود يحافظ على المركز بـ e6 ويتطور بهدوء." },
+        { "id": "accepted", "name": "Accepted (2...dxc4)", "san": "d4 d5 c4 dxc4 Nf3 Nf6 e3 e6 Bxc4 c5 O-O a6 Qe2 b5 Bb3 Nc6", "idea": "يأخذ الأسود البيدق ثم يتخلى عنه لتطوير سريع." },
+        { "id": "slav", "name": "Slav (2...c6)", "san": "d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4 Bf5 e3 e6 Bxc4 Bb4 O-O Nbd7", "idea": "الأسود يحمي d5 بـ c6 ويخرج الفيل قبل e6." }
+      ]
+    },
+    {
+      "id": "london", "name": "London System", "owner": "w", "start": "1.d4 d5 2.Bf4",
+      "idea": "نظام جاهز: الأبيض يطوّر الفيل خارج السلسلة ويبني نفس البنية في أغلب الحالات.",
+      "lines": [
+        { "id": "main", "name": "Main setup", "san": "d4 d5 Bf4 Nf6 e3 c5 c3 Nc6 Nd2 e6 Ngf3 Bd6 Bg3 O-O Bd3 b6", "idea": "تطوير النظام الكامل ضد أي رد." },
+        { "id": "queen-b6", "name": "vs ...c5 and ...Qb6", "san": "d4 d5 Bf4 c5 e3 Nc6 c3 Qb6 Qb3 c4 Qxb6 axb6 Nd2 e6", "idea": "الأسود يهاجم b2؛ الأبيض يبدل الملكات." }
+      ]
+    },
+    {
+      "id": "kid", "name": "King's Indian Defense", "owner": "b", "start": "1.d4 Nf6 2.c4 g6",
+      "idea": "الأسود يسمح للأبيض بمركز ضخم ثم يهاجمه بالقطع والبيادق.",
+      "lines": [
+        { "id": "classical", "name": "Classical", "san": "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7", "idea": "النظام الرئيسي مع إغلاق المركز." },
+        { "id": "samisch", "name": "Sämisch (5.f3)", "san": "d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 f3 O-O Be3 e5 Nge2 c6 Qd2 Nbd7", "idea": "الأبيض يبني مركزًا بـ f3 ويستعد لهجوم على الجناح." }
+      ]
+    },
+    {
+      "id": "english", "name": "English Opening", "owner": "w", "start": "1.c4",
+      "idea": "الأبيض يسيطر على d5 من الجناح ويبقي الخيارات مفتوحة.",
+      "lines": [
+        { "id": "reversed-sicilian", "name": "vs 1...e5 (Reversed Sicilian)", "san": "c4 e5 Nc3 Nf6 Nf3 Nc6 g3 d5 cxd5 Nxd5 Bg2 Nb6 O-O Be7 d3 O-O", "idea": "سيسيلي معكوس بحركة زائدة للأبيض." }
+      ]
+    },
+    {
+      "id": "dutch", "name": "Dutch Defense", "owner": "b", "start": "1.d4 f5",
+      "idea": "الأسود يطمح للسيطرة على e4 بـ f5 مبكرًا ويقبل ضعفًا في الجناح.",
+      "lines": [
+        { "id": "classical", "name": "vs 2.g3 (Fianchetto)", "san": "d4 f5 g3 Nf6 Bg2 e6 Nf3 d5 O-O Bd6 c4 c6 Nc3 O-O", "idea": "نظام الجدار الحجري مع تطوير هادئ." }
+      ]
+    },
+    {
+      "id": "pirc", "name": "Pirc / Modern Defense", "owner": "b", "start": "1.e4 d6",
+      "idea": "الأسود يسمح بمركز كبير ويهاجمه من الأجنحة.",
+      "lines": [
+        { "id": "austrian", "name": "Austrian Attack (4.f4)", "san": "e4 d6 d4 Nf6 Nc3 g6 f4 Bg7 Nf3 O-O Bd3 Na6 O-O c5", "idea": "هجوم مباشر من الأبيض؛ الأسود يرد بضربة c5." }
+      ]
+    }
+  ]
+}

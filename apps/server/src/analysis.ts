@@ -50,14 +50,14 @@ export async function analyseGame(gameId: number): Promise<void> {
 /** Classify stored evals and write the review + per-move stats (+ puzzles for fresh analyses). */
 function persist(g: any, evals: PositionEval[], fens: string[], withPuzzles: boolean) {
   const moves: string[] = JSON.parse(g.moves_uci);
-  const review = reviewGame({ moves, evals, bookPlies: g.book_plies ?? 0 });
+  const review = reviewGame({ moves, evals, bookPlies: g.book_plies ?? 0, ratings: { w: g.white_rating, b: g.black_rating } });
   const mineColor = g.color as 'w' | 'b';
   tx(() => {
     db.prepare('INSERT OR REPLACE INTO reviews(game_id,json,acc_w,acc_b,analysed_at,version) VALUES (?,?,?,?,?,?)')
       .run(g.id, JSON.stringify({ ...review, evals }), review.accuracy.w, review.accuracy.b, Math.floor(Date.now() / 1000), REVIEW_VERSION);
     db.prepare('DELETE FROM move_stats WHERE game_id=?').run(g.id);
-    const ins = db.prepare('INSERT INTO move_stats(game_id,profile_id,ply,mine,category,phase,loss,accuracy) VALUES (?,?,?,?,?,?,?,?)');
-    for (const m of review.moves) ins.run(g.id, g.profile_id, m.ply, m.color === mineColor ? 1 : 0, m.category, m.phase, m.loss, m.accuracy);
+    const ins = db.prepare('INSERT INTO move_stats(game_id,profile_id,ply,mine,category,phase,loss,accuracy,kind) VALUES (?,?,?,?,?,?,?,?,?)');
+    for (const m of review.moves) ins.run(g.id, g.profile_id, m.ply, m.color === mineColor ? 1 : 0, m.category, m.phase, m.loss, m.accuracy, m.kind);
     if (withPuzzles) {
       // Puzzles from the player's own mistakes/blunders (position before the move, engine line as the answer).
       const puz = db.prepare('INSERT OR IGNORE INTO puzzles(profile_id,game_id,ply,fen,solution,played,category,theme,due_at) VALUES (?,?,?,?,?,?,?,?,0)');

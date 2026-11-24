@@ -3,12 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "dev": "npm run dev -w apps/server",
     "dev:web": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
     "start": "npm run start -w apps/server",
-    "test": "npm test -w packages/core -w apps/server"
+    "test": "node scripts/check-i18n.mjs && npm run typecheck -w apps/web && npm test -w packages/core -w apps/server"
   }
 }

@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { gameAccuracy, moveAccuracy, winPercent, type Color, type Score } from './winpercent.js';
 import { nonPawnMaterial, playUci, sacrificeAmount } from './material.js';
+// (Thresholds is declared below; the type is hoisted)
 
 /** One engine line. cp/mate are from the point of view of the side to move. */
 export interface EngineLine extends Score {
@@ -13,7 +14,19 @@ export interface PositionEval {
 }
 
 /** Bump when classification rules change; the server re-reviews stored analyses (no engine needed). */
-export const REVIEW_VERSION = 2;
+export const REVIEW_VERSION = 4;
+
+/** Why a weak move was weak, in terms a learner can train against. */
+export type MistakeKind = 'allows-mate' | 'hangs-piece' | 'allows-tactic' | 'missed-mate' | 'missed-material' | 'positional';
+
+/**
+ * chess.com says its Brilliant/Great definitions are more generous for lower-rated players but publishes no numbers.
+ * These loosened values are our assumption until calibrated against real chess.com reviews (scripts/calibrate.ts).
+ */
+export function thresholdsForRating(rating: number | null | undefined): Partial<Thresholds> {
+  if (rating && rating < 1200) return { brilliantMinWinAfter: 40, brilliantMaxWinBefore: 92, greatGap: 12 };
+  return {};
+}
 
 export type Category =
   | 'brilliant'
@@ -70,6 +83,7 @@ export interface MoveReview {
   evalWhiteCp: number | null; // after the move, white POV, mates clamped
   phase: Phase;
   sacrifice: number;
+  kind: MistakeKind | null; // only for inaccuracy / mistake / blunder
 }
 
 export interface GameReview {
@@ -111,9 +125,10 @@ export function reviewGame(opts: {
   evals: PositionEval[];
   startFen?: string;
   bookPlies?: number;
+  ratings?: { w?: number | null; b?: number | null };
   thresholds?: Partial<Thresholds>;
 }): GameReview {
-  const T = { ...DEFAULT_THRESHOLDS, ...opts.thresholds };
+  const baseT = { ...DEFAULT_THRESHOLDS, ...opts.thresholds };
   const { moves, evals } = opts;
   const bookPlies = opts.bookPlies ?? 0;
   const chess = opts.startFen ? new Chess(opts.startFen) : new Chess();
@@ -145,6 +160,7 @@ export function reviewGame(opts: {
     const before = states[i];
     const mover: Color = before.turn();
     const uci = moves[i];
+    const T = opts.thresholds ? baseT : { ...baseT, ...thresholdsForRating(opts.ratings?.[mover]) };
     const lines = evals[i]?.lines ?? [];
     const best = lines[0];
 
@@ -205,12 +221,33 @@ export function reviewGame(opts: {
     else if (loss <= T.mistake) category = 'mistake';
     else category = 'blunder';
 
+    // Why a weak move was weak (drives which puzzles the coach assigns)
+    let kind: MistakeKind | null = null;
+    if (category === 'inaccuracy' || category === 'mistake' || category === 'blunder') {
+      const reply = evals[i + 1]?.lines[0];
+      const replyMove = reply?.pv[0]
+        ? states[i + 1].moves({ verbose: true }).find((m) => m.from + m.to + (m.promotion ?? '') === reply.pv[0])
+        : undefined;
+      // material the mover ends up losing along the opponent's best line (looks further than the Brilliant test)
+      let lossLong = sacrifice;
+      try { lossLong = Math.max(sacrifice, sacrificeAmount(fens[i], seq, mover, 12)); } catch { /* keep short value */ }
+      if (reply && reply.mate !== undefined && reply.mate > 0) kind = 'allows-mate';
+      else if (lossLong >= 2 && replyMove?.captured) kind = 'hangs-piece';
+      else if (lossLong >= 2) kind = 'allows-tactic';
+      else if (best && best.mate !== undefined && best.mate > 0) kind = 'missed-mate';
+      else {
+        let gain = 0;
+        try { gain = -sacrificeAmount(fens[i], best?.pv ?? [], mover); } catch { gain = 0; }
+        kind = gain >= 2 ? 'missed-material' : 'positional';
+      }
+    }
+
     const accuracy = moveAccuracy(winBeforeBest, winAfter);
     counts[mover][category]++;
     phaseAcc[mover][phase].push(accuracy);
     out.push({
       ply: i, color: mover, uci, san, category, winBefore: winBeforeBest, winAfter, loss, accuracy,
-      bestUci, bestSan, evalWhiteCp: whiteCpAt(states[i + 1], evals[i + 1], winWhite[i + 1]), phase, sacrifice,
+      bestUci, bestSan, evalWhiteCp: whiteCpAt(states[i + 1], evals[i + 1], winWhite[i + 1]), phase, sacrifice, kind,
     });
   }
 

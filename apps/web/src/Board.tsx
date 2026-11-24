@@ -22,13 +22,14 @@ export interface BoardProps {
   fen: string;
   orientation?: 'white' | 'black';
   lastMove?: [string, string] | null;
-  arrows?: { from: string; to: string; brush: 'green' | 'red' | 'blue' }[];
+  arrows?: { from: string; to?: string; brush: 'green' | 'red' | 'blue' }[]; // no `to` draws a circle
   interactive?: boolean; // allow the side to move to play
   onMove?: (uci: string) => void;
+  nonce?: number; // bump to force the board back to `fen` (e.g. after a rejected move)
 }
 
 /** Chessground wrapper. The board itself is always left-to-right even on an RTL page. */
-export function Board({ fen, orientation = 'white', lastMove, arrows = [], interactive = false, onMove }: BoardProps) {
+export function Board({ fen, orientation = 'white', lastMove, arrows = [], interactive = false, onMove, nonce = 0 }: BoardProps) {
   const el = useRef<HTMLDivElement>(null);
   const cg = useRef<Api | null>(null);
   const cb = useRef(onMove);
@@ -66,9 +67,9 @@ export function Board({ fen, orientation = 'white', lastMove, arrows = [], inter
           },
         },
       },
-      drawable: { enabled: false, visible: true, autoShapes: arrows.map((a) => ({ orig: a.from as Key, dest: a.to as Key, brush: a.brush })) },
+      drawable: { enabled: false, visible: true, autoShapes: arrows.map((a) => ({ orig: a.from as Key, dest: (a.to ?? undefined) as Key | undefined, brush: a.brush })) },
     });
-  }, [fen, orientation, lastMove?.[0], lastMove?.[1], interactive, JSON.stringify(arrows)]);
+  }, [fen, orientation, lastMove?.[0], lastMove?.[1], interactive, nonce, JSON.stringify(arrows)]);
 
   return <div className="board-wrap"><div ref={el} className="board" dir="ltr" /></div>;
 }

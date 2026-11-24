@@ -11,6 +11,9 @@ import { buildCoach } from './coach.js';
 import { kick, queueStats, rereviewOutdated, startWorker } from './analysis.js';
 import { openingsLoaded } from './openings.js';
 import { botMove } from './bot.js';
+import { buildSprint, getSetting, readSprint, setSetting } from './sprint.js';
+import { loadTrainer } from './trainer.js';
+import { ensureLibrary, importLibrary, libState, libraryCount, nextLibraryPuzzle, puzzleRating, recordAttempt, streak, themeStats } from './library.js';
 import { Chess } from 'chess.js';
 
 const app = Fastify({ logger: { level: 'warn' }, bodyLimit: 64 * 1024 });
@@ -232,6 +235,96 @@ app.post('/api/puzzles/:id/attempt', async (req) => {
   return { ok: true, box };
 });
 
+// ------------------------------------------------------------------ puzzle library + training progress
+app.get('/api/library/status', async () => ({ ...libState, count: libraryCount() }));
+app.post('/api/library/import', async () => { void importLibrary(); return { started: true }; });
+
+function cachedTactics(profileId: number): number | null {
+  const acc = db.prepare("SELECT username FROM accounts WHERE profile_id=? AND provider='chesscom' LIMIT 1").get(profileId) as any;
+  return acc ? ratingCache.get(acc.username)?.v.tactics ?? null : null;
+}
+
+app.get('/api/lib-puzzles/next', async (req) => {
+  const p = (req as any).profile;
+  const theme = String((req.query as any).theme ?? '').replace(/[^A-Za-z0-9]/g, '') || undefined;
+  const rating = puzzleRating(p.id, cachedTactics(p.id));
+  const puzzle = nextLibraryPuzzle(p.id, rating, theme);
+  return { puzzle, rating: Math.round(rating), libraryReady: libraryCount() > 0 };
+});
+
+app.post('/api/lib-puzzles/:id/attempt', async (req, reply) => {
+  const p = (req as any).profile;
+  const { solved, hints, ms } = (req.body ?? {}) as { solved?: boolean; hints?: number; ms?: number };
+  const r = recordAttempt(p.id, String((req.params as any).id), !!solved, Math.max(0, Math.min(3, Number(hints) || 0)), Number.isFinite(ms) ? Number(ms) : null);
+  if (!r) return reply.code(404).send({ error: 'unknown puzzle' });
+  return { before: Math.round(r.before), after: Math.round(r.after), streak: streak(p.id) };
+});
+
+app.get('/api/training/summary', async (req) => {
+  const p = (req as any).profile;
+  const today = new Date().toISOString().slice(0, 10);
+  const days = db.prepare('SELECT day, puzzles, correct FROM activity WHERE profile_id=? ORDER BY day DESC LIMIT 14').all(p.id);
+  return {
+    rating: Math.round(puzzleRating(p.id, cachedTactics(p.id))),
+    streak: streak(p.id),
+    today: (days as any[]).find((d) => d.day === today) ?? { day: today, puzzles: 0, correct: 0 },
+    days,
+    themes: themeStats(p.id),
+    library: { ...libState, count: libraryCount() },
+  };
+});
+
+// ------------------------------------------------------------------ opening trainer (counters + role swap)
+app.get('/api/trainer', async (req) => {
+  const p = (req as any).profile;
+  const t = loadTrainer();
+  const prog = db.prepare('SELECT line_key, role, box, due_at, attempts, clean, mistakes FROM trainer_progress WHERE profile_id=?').all(p.id);
+  return { note: t.note, families: t.families, progress: prog };
+});
+app.post('/api/trainer/result', async (req, reply) => {
+  const p = (req as any).profile;
+  const { family, line, role, mistakes } = (req.body ?? {}) as any;
+  const f = loadTrainer().families.find((x) => x.id === family);
+  if (!f || !f.lines.some((l) => l.id === line) || !['owner', 'counter'].includes(role)) return reply.code(400).send({ error: 'bad request' });
+  const key = `${family}/${line}`;
+  const m = Math.max(0, Math.min(50, Number(mistakes) || 0));
+  const cur = (db.prepare('SELECT * FROM trainer_progress WHERE profile_id=? AND line_key=? AND role=?').get(p.id, key, role) as any) ?? { box: 0 };
+  const box = m === 0 ? Math.min(4, cur.box + 1) : 0;
+  const due = now() + (m === 0 ? [0, 1, 3, 7, 21][box] * 86400 : 600);
+  db.prepare(`INSERT INTO trainer_progress(profile_id,line_key,role,box,due_at,attempts,clean,mistakes) VALUES (?,?,?,?,?,1,?,?)
+    ON CONFLICT(profile_id,line_key,role) DO UPDATE SET box=?, due_at=?, attempts=attempts+1, clean=clean+?, mistakes=mistakes+?`)
+    .run(p.id, key, role, box, due, m === 0 ? 1 : 0, m, box, due, m === 0 ? 1 : 0, m);
+  return { ok: true, box };
+});
+
+// ------------------------------------------------------------------ contest sprint
+app.get('/api/sprint', async (req) => {
+  const p = (req as any).profile;
+  const settings = readSprint(p.id);
+  const ratings = await Promise.race([ratingsFor(p.id), new Promise<null>((r) => setTimeout(() => r(null), 1500))]);
+  const plan = buildSprint(p.id, settings, ratings?.rapid ?? null);
+  const done = JSON.parse(getSetting(p.id, 'sprint_done') ?? '{}') as Record<string, boolean>;
+  return { settings, plan, done, rating: ratings?.rapid ?? null };
+});
+app.put('/api/sprint', async (req, reply) => {
+  const p = (req as any).profile;
+  const b = (req.body ?? {}) as any;
+  const contestDate = String(b.contestDate ?? '');
+  if (contestDate && !/^\d{4}-\d{2}-\d{2}$/.test(contestDate)) return reply.code(400).send({ error: 'bad date' });
+  const s = { contestDate, target: Math.max(400, Math.min(2500, Number(b.target) || 1200)), minutes: Math.max(15, Math.min(240, Number(b.minutes) || 60)) };
+  setSetting(p.id, 'sprint', JSON.stringify(s));
+  return { ok: true };
+});
+app.post('/api/sprint/check', async (req) => {
+  const p = (req as any).profile;
+  const { key, done } = (req.body ?? {}) as { key?: string; done?: boolean };
+  if (!key || !/^\d{4}-\d{2}-\d{2}:[a-z-]+$/.test(key)) return { ok: false };
+  const m = JSON.parse(getSetting(p.id, 'sprint_done') ?? '{}');
+  if (done) m[key] = true; else delete m[key];
+  setSetting(p.id, 'sprint_done', JSON.stringify(m));
+  return { ok: true };
+});
+
 app.post('/api/bot/move', async (req, reply) => {
   const { fen, elo } = (req.body ?? {}) as { fen?: string; elo?: number };
   if (!fen || typeof fen !== 'string' || fen.length > 120) return reply.code(400).send({ error: 'bad fen' });
@@ -259,6 +352,7 @@ if (existsSync(webDist)) {
 const port = Number(process.env.PORT) || 3000;
 await app.listen({ port, host: '0.0.0.0' });
 console.log(`Chess Analysis Studio on http://0.0.0.0:${port}`);
+ensureLibrary();
 if (process.env.NO_ENGINE !== '1') {
   startWorker().then(() => console.log('engine pool ready')).catch((e) => console.error('engine failed:', e.message));
 }

@@ -101,7 +101,45 @@ CREATE TABLE IF NOT EXISTS rating_snapshots (
 );
 `);
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS lib_puzzles (
+  id TEXT PRIMARY KEY, fen TEXT NOT NULL, moves TEXT NOT NULL, rating INTEGER NOT NULL,
+  themes TEXT NOT NULL, opening_tags TEXT, game_url TEXT
+);
+CREATE INDEX IF NOT EXISTS lib_puzzles_rating ON lib_puzzles(rating);
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS lib_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  puzzle_id TEXT NOT NULL, solved INTEGER NOT NULL, hints INTEGER DEFAULT 0, ms INTEGER,
+  themes TEXT, rating_before REAL, rating_after REAL, at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS lib_attempts_p ON lib_attempts(profile_id, at);
+CREATE TABLE IF NOT EXISTS puzzle_profile (
+  profile_id INTEGER PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  rating REAL NOT NULL DEFAULT 800
+);
+CREATE TABLE IF NOT EXISTS activity (
+  profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  day TEXT NOT NULL, puzzles INTEGER DEFAULT 0, correct INTEGER DEFAULT 0, games INTEGER DEFAULT 0,
+  PRIMARY KEY (profile_id, day)
+);
+CREATE TABLE IF NOT EXISTS trainer_progress (
+  profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  line_key TEXT NOT NULL,            -- "<family>/<line>"
+  role TEXT NOT NULL,                -- 'owner' (you play the opening) | 'counter' (you play the answer)
+  box INTEGER NOT NULL DEFAULT 0, due_at INTEGER NOT NULL DEFAULT 0,
+  attempts INTEGER NOT NULL DEFAULT 0, clean INTEGER NOT NULL DEFAULT 0, mistakes INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (profile_id, line_key, role)
+);
+CREATE TABLE IF NOT EXISTS settings (
+  profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  key TEXT NOT NULL, value TEXT NOT NULL, PRIMARY KEY (profile_id, key)
+);
+`);
+
 // migrations for databases created by earlier versions
+try { db.exec('ALTER TABLE move_stats ADD COLUMN kind TEXT'); } catch { /* already there */ }
 try { db.exec('ALTER TABLE reviews ADD COLUMN version INTEGER DEFAULT 1'); } catch { /* already there */ }
 
 export function tx<T>(fn: () => T): T {

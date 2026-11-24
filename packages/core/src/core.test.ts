@@ -64,7 +64,39 @@ describe('terminal positions and mates', () => {
     expect(last.winAfter).toBe(100);
     expect(['best', 'great']).toContain(last.category);
     expect(r.moves[2].category).toBe('blunder'); // g4 allowed mate in 1
+    expect(r.moves[2].kind).toBe('allows-mate');
     expect(r.winWhite.at(-1)).toBe(0);
+  });
+});
+
+describe('mistake kinds', () => {
+  const F = '4k3/8/8/3r4/8/8/3R4/4K3 w - - 0 1';
+  it('hangs-piece: moving a rook where it is simply captured', () => {
+    const r = reviewGame({
+      startFen: F, moves: ['d2d3'],
+      evals: [
+        { lines: [L(0, 'd2a2')] },
+        { lines: [{ multipv: 1, cp: 500, pv: ['d5d3', 'e1e2'] }] }, // black POV +500
+      ],
+    });
+    expect(r.moves[0].category).toBe('blunder');
+    expect(r.moves[0].kind).toBe('hangs-piece');
+  });
+  it('missed-material: the best move won a rook but a quiet move was played', () => {
+    const f = '4k3/8/8/3r4/8/8/8/3RK3 w - - 0 1'; // Rxd5+ wins a rook for free
+    const r = reviewGame({
+      startFen: f, moves: ['e1e2'],
+      evals: [
+        { lines: [{ multipv: 1, cp: 700, pv: ['d1d5', 'e8e7', 'd5a5'] }] },
+        { lines: [{ multipv: 1, cp: 0, pv: ['e8e7'] }] },
+      ],
+    });
+    expect(['mistake', 'blunder']).toContain(r.moves[0].category);
+    expect(r.moves[0].kind).toBe('missed-material');
+  });
+  it('good moves carry no kind', () => {
+    const r = reviewGame({ startFen: F, moves: ['d2a2'], evals: [{ lines: [L(0, 'd2a2')] }, { lines: [{ multipv: 1, cp: 0, pv: ['d5d1'] }] }] });
+    expect(r.moves[0].kind).toBeNull();
   });
 });
 

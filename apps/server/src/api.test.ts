@@ -47,6 +47,22 @@ describe('API security and isolation', () => {
   it('requires a session', async () => {
     expect((await call('/api/games')).status).toBe(401);
     expect((await call('/api/stats')).status).toBe(401);
+    for (const p of ['/api/sprint', '/api/trainer', '/api/lib-puzzles/next', '/api/training/summary', '/api/library/status']) {
+      expect((await call(p)).status).toBe(401);
+    }
+  });
+  it('validates sprint input and serves trainer data to a signed-in profile', async () => {
+    const r = await call('/api/profiles', '', { name: 'Gamma' });
+    const c = r.cookie;
+    expect((await call('/api/sprint', c, { contestDate: 'tomorrow' }, 'PUT')).status).toBe(400);
+    expect((await call('/api/sprint', c, { contestDate: '2026-11-27', target: 1200, minutes: 45 }, 'PUT')).status).toBe(200);
+    const s = await call('/api/sprint', c);
+    expect(s.json.settings.contestDate).toBe('2026-11-27');
+    expect(s.json.plan.days.length).toBeGreaterThan(0);
+    const tr = await call('/api/trainer', c);
+    expect(tr.json.families.length).toBeGreaterThanOrEqual(10);
+    expect((await call('/api/trainer/result', c, { family: 'nope', line: 'x', role: 'owner', mistakes: 0 })).status).toBe(400);
+    expect((await call('/api/lib-puzzles/nope/attempt', c, { solved: true })).status).toBe(404);
   });
   it('sends hardening headers', async () => {
     const r = await call('/api/health');

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { t } from './i18n';
 
 export class ApiError extends Error {
   constructor(public status: number, msg: string) { super(msg); }
@@ -13,7 +14,7 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   });
   if (!res.ok) {
     let msg = res.statusText;
-    try { msg = (await res.json()).error ?? msg; } catch {}
+    try { msg = (await res.json()).error ?? msg; } catch { /* not json */ }
     throw new ApiError(res.status, msg);
   }
   return res.json();
@@ -34,7 +35,7 @@ export function useApi<T = any>(path: string | null, deps: unknown[] = []): Load
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, tick, ...deps]);
-  const reload = useCallback(() => setTick((t) => t + 1), []);
+  const reload = useCallback(() => setTick((x) => x + 1), []);
   return { ...state, reload };
 }
 
@@ -51,16 +52,11 @@ export function useHash(): [string, URLSearchParams, (to: string) => void] {
   return [path, new URLSearchParams(q), (to) => { location.hash = to; }];
 }
 
-export const CATEGORY_AR: Record<string, string> = {
-  brilliant: 'رائعة', great: 'ممتازة', best: 'الأفضل', excellent: 'جيدة جدًا', good: 'جيدة', book: 'نظرية',
-  inaccuracy: 'دقة ناقصة', mistake: 'خطأ', blunder: 'خطأ فادح',
-};
 export const CATEGORY_MARK: Record<string, string> = {
   brilliant: '!!', great: '!', best: '★', excellent: '', good: '', book: '≡', inaccuracy: '?!', mistake: '?', blunder: '??',
 };
-export const PHASE_AR: Record<string, string> = { opening: 'الافتتاح', middlegame: 'الوسط', endgame: 'النهاية' };
-export const TC_AR: Record<string, string> = { rapid: 'Rapid', blitz: 'Blitz', bullet: 'Bullet', daily: 'Daily', all: 'الكل' };
-
+export const catName = (c: string) => t('cat.' + c);
+export const themeName = (th: string) => { const k = 'theme.' + th; const v = t(k); return v === k ? th : v; };
 export const fmt1 = (n: number | null | undefined, d = 1) => (n == null ? '—' : n.toFixed(d));
 export const pct = (n: number | null | undefined) => (n == null ? '—' : Math.round(n * 100) + '%');
-export const dateAr = (t: number | null) => (t ? new Date(t * 1000).toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'short', day: 'numeric' }) : '—');
+export const tcName = (k: string) => t('common.' + k);

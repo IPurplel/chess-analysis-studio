@@ -111,7 +111,31 @@ export function overview(profileId: number, f: Filters) {
     }
   }
 
+  // Per-phase detail, mistake kinds and where in the game the blunders happen.
+  const mv = db.prepare(`SELECT m.phase, m.category, m.kind, m.ply, m.loss, m.accuracy FROM move_stats m JOIN games g ON g.id = m.game_id
+    WHERE ${w.sql} AND m.mine = 1`).all(...w.args) as any[];
+  const phases: Record<string, { moves: number; blunders: number; mistakes: number; inaccuracies: number; lossSum: number; accSum: number }> = {};
+  const kinds: Record<string, number> = {};
+  const collapse: Record<string, number> = { '1-10': 0, '11-20': 0, '21-30': 0, '31-40': 0, '41+': 0 };
+  for (const r of mv) {
+    const p = (phases[r.phase] ??= { moves: 0, blunders: 0, mistakes: 0, inaccuracies: 0, lossSum: 0, accSum: 0 });
+    p.moves++; p.lossSum += r.loss ?? 0; p.accSum += r.accuracy ?? 0;
+    if (r.category === 'blunder') p.blunders++;
+    if (r.category === 'mistake') p.mistakes++;
+    if (r.category === 'inaccuracy') p.inaccuracies++;
+    if (r.category === 'blunder' || r.category === 'mistake') {
+      if (r.kind) kinds[r.kind] = (kinds[r.kind] ?? 0) + 1;
+      const full = Math.floor(r.ply / 2) + 1;
+      collapse[full <= 10 ? '1-10' : full <= 20 ? '11-20' : full <= 30 ? '21-30' : full <= 40 ? '31-40' : '41+']++;
+    }
+  }
+  const phaseDetail = Object.fromEntries(Object.entries(phases).map(([k, p]) => [k, {
+    moves: p.moves, blunders: p.blunders, mistakes: p.mistakes, inaccuracies: p.inaccuracies,
+    blundersPer100: (100 * p.blunders) / p.moves, avgLoss: p.lossSum / p.moves, accuracy: p.accSum / p.moves,
+  }]));
+
   return {
+    insights: { phaseDetail, kinds, collapse },
     timePressure: tp,
     totals: {
       ...totals,
