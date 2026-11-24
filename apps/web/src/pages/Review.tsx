@@ -5,6 +5,7 @@ import { api, useApi, catName, CATEGORY_MARK, fmt1 } from '../api';
 import { t, dateLocal } from '../i18n';
 import { ErrorBox, Loading } from '../ui';
 import { KIND_THEME } from './Insights';
+import { PuzzlePlayer } from './PuzzlePlayer';
 
 const CATS = ['brilliant', 'great', 'best', 'excellent', 'good', 'book', 'inaccuracy', 'mistake', 'blunder'];
 
@@ -30,9 +31,16 @@ function EvalChart({ win, ply, onPick, orientation }: { win: number[]; ply: numb
   );
 }
 
+function CountCell({ n, onClick, cur }: { n: number; onClick: () => void; cur?: number }) {
+  if (!n) return <span className="measured muted">0</span>;
+  return <button className="countbtn measured" onClick={onClick} title={t('rev.jumpHint')}>{cur != null ? `${cur + 1}/${n}` : n}</button>;
+}
+
 export function Review({ id }: { id: number }) {
   const { data, error, loading, reload } = useApi<any>(`/games/${id}`);
   const [ply, setPly] = useState(0);
+  const [practice, setPractice] = useState<null | { fen: string; solution: string[]; orientation: 'white' | 'black'; san: string }>(null);
+  const [cursor, setCursor] = useState<Record<string, number>>({});
   const g = data?.game;
   const review = data?.review;
 
@@ -48,7 +56,7 @@ export function Review({ id }: { id: number }) {
   }, [g]);
 
   const max = g ? g.moves.length : 0;
-  useEffect(() => { setPly(0); }, [id]);
+  useEffect(() => { setPly(0); setPractice(null); setCursor({}); }, [id]);
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -84,10 +92,40 @@ export function Review({ id }: { id: number }) {
   const barWhite = winW ? winW[ply] : 50;
   const rows: any[] = [];
   if (review) for (let i = 0; i < review.moves.length; i += 2) rows.push([review.moves[i], review.moves[i + 1]]);
+  const jump = (cat: string, color: 'w' | 'b') => {
+    const list = (review?.moves ?? []).filter((m: any) => m.category === cat && m.color === color);
+    if (!list.length) return;
+    const key = cat + color;
+    const next = ((cursor[key] ?? -1) + 1) % list.length;
+    setCursor({ ...cursor, [key]: next });
+    setPractice(null);
+    setPly(list[next].ply + 1);
+  };
+  const myMoves = Math.ceil(max / 2) * (g.color === 'w' ? 1 : 0) + Math.floor(max / 2) * (g.color === 'w' ? 0 : 1);
+  const oppMoves = max - myMoves;
+  const startPractice = (m: any) => {
+    const pv: string[] = (review?.evals?.[m.ply]?.lines?.[0]?.pv ?? []).slice(0, 8);
+    if (pv.length < 1) return;
+    setPractice({ fen: fens[m.ply], solution: pv, orientation: m.color === 'w' ? 'white' : 'black', san: m.san });
+  };
   const oppName = g.color === 'w' ? g.black : g.white;
   const oppRating = g.color === 'w' ? g.black_rating : g.white_rating;
   const myName = g.color === 'w' ? g.white : g.black;
   const myRating = g.color === 'w' ? g.white_rating : g.black_rating;
+
+  if (practice) {
+    return (
+      <div className="stack">
+        <div className="pagehead">
+          <h1>{t('rev.practiceTitle', { san: practice.san })}</h1>
+          <button className="btn" onClick={() => setPractice(null)}>{t('rev.backToReview')}</button>
+        </div>
+        <p className="muted">{t('rev.practiceHint')}</p>
+        <PuzzlePlayer key={practice.fen} puzzle={{ id: practice.fen, fen: practice.fen, orientation: practice.orientation, solution: practice.solution }}
+          onResult={() => {}} onNext={() => setPractice(null)} />
+      </div>
+    );
+  }
 
   return (
     <div className="review">
@@ -113,6 +151,7 @@ export function Review({ id }: { id: number }) {
         <header className="review-head">
           <h1>{g.opening || '—'}</h1>
           <p className="muted">{dateLocal(g.played_at)} · {g.time_class} · {g.result === 'W' ? t('rev.win') : g.result === 'L' ? t('rev.lose') : t('rev.draw')}{g.url ? <> — <a href={g.url} target="_blank" rel="noreferrer">{t('common.source')}</a></> : null}</p>
+          <p className="muted">{t('rev.moveCount', { me: myMoves, opp: oppMoves })}</p>
         </header>
 
         {!review && (
@@ -146,17 +185,18 @@ export function Review({ id }: { id: number }) {
                 {mv.kind && (
                   <span className="kindrow">{t('rev.whyBad')}: <b>{t('kind.' + mv.kind)}</b>{mv.color === g.color && <> <a className="btn btn-quiet" href={`#/puzzles?theme=${KIND_THEME[mv.kind] ?? ''}`}>{t('rev.trainKind')}</a></>}</span>
                 )}
+                {mv.color === g.color && ['inaccuracy', 'mistake', 'blunder'].includes(mv.category) && <button className="btn btn-primary" onClick={() => startPractice(mv)}>{t('rev.practice')}</button>}
                 {mv.category === 'brilliant' && <span className="muted">{t('rev.sacrifice', { n: fmt1(mv.sacrifice, 0) })}</span>}
               </div>
             )}
 
             <div className="panel">
               <table className="table counts">
-                <thead><tr><th>{t('rev.type')}</th><th className="num">{t('common.white')}</th><th className="num">{t('common.black')}</th></tr></thead>
+                <caption className="visually-hidden">{t('rev.jumpHint')}</caption><thead><tr><th>{t('rev.type')}</th><th className="num">{t('common.white')}</th><th className="num">{t('common.black')}</th></tr></thead>
                 <tbody>
                   {CATS.map((c) => (
                     <tr key={c}><td><span className={`chip chip-${c}`}>{CATEGORY_MARK[c]} {catName(c)}</span></td>
-                      <td className="num measured">{review.counts.w[c]}</td><td className="num measured">{review.counts.b[c]}</td></tr>
+                      <td className="num"><CountCell n={review.counts.w[c]} onClick={() => jump(c, 'w')} cur={cursor[c + 'w']} /></td><td className="num"><CountCell n={review.counts.b[c]} onClick={() => jump(c, 'b')} cur={cursor[c + 'b']} /></td></tr>
                   ))}
                 </tbody>
               </table>

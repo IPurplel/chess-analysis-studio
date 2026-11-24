@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { t } from './i18n';
 import { Chessground } from 'chessground';
 import type { Api } from 'chessground/api';
 import type { Key } from 'chessground/types';
@@ -72,4 +73,31 @@ export function Board({ fen, orientation = 'white', lastMove, arrows = [], inter
   }, [fen, orientation, lastMove?.[0], lastMove?.[1], interactive, nonce, JSON.stringify(arrows)]);
 
   return <div className="board-wrap"><div ref={el} className="board" dir="ltr" /></div>;
+}
+
+/** Keyboard/touch-friendly move entry (SAN such as Nf3 or e4, or coordinates such as e2e4). The board alone needs a pointer. */
+export function MoveInput({ fen, onMove, disabled }: { fen: string; onMove: (uci: string) => void; disabled?: boolean }) {
+  const [v, setV] = useState('');
+  const [bad, setBad] = useState(false);
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = v.trim();
+    if (!text) return;
+    try {
+      const c = new Chess(fen);
+      const m = /^[a-h][1-8][a-h][1-8][qrbn]?$/i.test(text)
+        ? c.move({ from: text.slice(0, 2).toLowerCase(), to: text.slice(2, 4).toLowerCase(), promotion: text[4]?.toLowerCase() })
+        : c.move(text, { strict: false });
+      setBad(false); setV('');
+      onMove(m.from + m.to + (m.promotion ?? ''));
+    } catch { setBad(true); }
+  };
+  return (
+    <form className="moveinput" onSubmit={submit}>
+      <label className="field"><span className="label">{t('mv.input')}</span>
+        <input dir="ltr" value={v} onChange={(e) => { setV(e.target.value); setBad(false); }} disabled={disabled} autoComplete="off" autoCapitalize="off" spellCheck={false}
+          placeholder="Nf3, e4, e2e4" aria-invalid={bad} aria-describedby={bad ? 'mv-err' : undefined} /></label>
+      {bad && <p id="mv-err" className="fb fb-bad" role="alert">{t('mv.invalid')}</p>}
+    </form>
+  );
 }

@@ -52,6 +52,13 @@ export function Home({ me }: { me: any }) {
           ) : (
             <>
               <p className="muted">{daysLeft != null && (daysLeft > 0 ? t('home.daysLeft', { n: daysLeft }) : t('home.contestToday'))} · {t('home.tasksDone', { done, total: today.tasks.length })}</p>
+              {(() => {
+                const nextTask = today.tasks.find((k: any) => !sprint.data.done[`${today.date}:${k.id}`] && taskHref(k));
+                return nextTask
+                  ? <a className="btn btn-primary btn-lg" href={taskHref(nextTask)!}>{t('home.next', { task: taskLabel(nextTask) })}</a>
+                  : <p className="fb fb-ok">{t('home.allDone')}</p>;
+              })()}
+              <progress className="stepbar" value={done} max={today.tasks.length} aria-label={t('home.tasksDone', { done, total: today.tasks.length })} />
               <ul className="tasklist">
                 {today.tasks.map((k: any) => {
                   const isDone = !!sprint.data.done[`${today.date}:${k.id}`];

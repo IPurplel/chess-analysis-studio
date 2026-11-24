@@ -1,30 +1,38 @@
 # استوديو الشطرنج — Chess Analysis Studio
 
-تحليل مبارياتك من chess.com و lichess بمحرك Stockfish 19 الأصلي: دقة وBrilliant/Blunder لكل مباراة، إحصائيات الافتتاحيات بأسماء ECO، أخطاؤك تحت ضغط الوقت، مدرب شخصي حسب تصنيفك، تمارين من أخطائك، وبوتات للتدريب. يعمل على سيرفرك وبياناتك لا تغادره.
+تحليل مبارياتك من chess.com و lichess بمحرك Stockfish 19: دقة وBrilliant/Blunder لكل مباراة، أسباب أخطائك، إحصائيات الافتتاحيات، مدرب افتتاحيات تعليمي خطوة بخطوة مع الردود المضادة، مكتبة تمارين، خطة تدريب لمسابقتك، وبوتات. يعمل على سيرفرك وبياناتك لا تغادره. الواجهة عربي/إنجليزي.
 
-## التثبيت بأمر واحد (حاوية LXC أو VM بـ Debian/Ubuntu، كـ root)
-```
+## التثبيت أو التحديث بأمر واحد (حاوية LXC أو VM بـ Debian/Ubuntu)
+```bash
 curl -fsSL https://raw.githubusercontent.com/IPurplel/chess-analysis-studio/main/deploy/bootstrap.sh | bash
 ```
-يثبّت Docker وgit، ينسخ المشروع إلى `/opt/chess-analysis-studio`، يبني الصورة (يحمّل Stockfish الرسمي ويتحقق من بصمته)، ثم يطبع الرابط `http://IP:3000`.
-
+- **المشروع يوضع في مجلدك مباشرة:** `~/chess-analysis-studio` (لو دخلت كـ root فهو `/root/chess-analysis-studio`). ادخل له بـ `cd ~/chess-analysis-studio`.
+- الأمر يثبّت Docker وgit، ويبني الصورة (يحمّل Stockfish الرسمي ويتحقق من بصمته)، ثم يطبع الرابط `http://IP:3000`.
+- **كنت مثبّته قديمًا في `/opt/chess-analysis-studio`؟** شغّل نفس الأمر مرة واحدة: ينقل المشروع تلقائيًا إلى مجلدك دون أن تفقد أي بيانات (بياناتك في volume منفصل).
 - حاوية LXC على Proxmox: فعّل على المضيف `pct set <ID> --features nesting=1,keyctl=1` ثم أعد تشغيلها قبل التثبيت.
-- أسرع على سيرفر ضعيف (صورة جاهزة بدل البناء): `STUDIO_IMAGE=ghcr.io/ipurplel/chess-analysis-studio:latest` قبل الأمر (تأكد أن حزمة الصورة عامة في GitHub).
-- **تحديث تلقائي:** المثبّت يفعّل مؤقتًا (systemd) يفحص GitHub كل 10 دقائق؛ عند وجود نسخة جديدة يسحبها ويعيد بناء الحاوية ويشغّلها. إن فشل تشغيل النسخة الجديدة يرجع للسابقة تلقائيًا. بعد كل تحديث يحذف الصور القديمة وكاش البناء الزائد (لا يمس بياناتك ولا صور أخرى على الجهاز). السجل: `/var/log/chess-studio-update.log`. للإيقاف: `systemctl disable --now chess-studio-update.timer` أو ثبّت بـ `AUTO_UPDATE=0`.
-- تحديث فوري يدويًا: `bash /opt/chess-analysis-studio/deploy/update.sh` (البيانات محفوظة في volume).
+
+## التحديث
+- **تلقائي:** المثبّت يفعّل مؤقتًا يفحص GitHub كل 10 دقائق؛ عند وجود نسخة جديدة يسحبها ويعيد بناء الحاوية. إن فشل تشغيل النسخة الجديدة يرجع للسابقة، ويحاول 3 مرات كحد أقصى لكل نسخة. بعد كل تحديث يحذف الصور القديمة وكاش البناء الزائد (لا يمس بياناتك). السجل: `/var/log/chess-studio-update.log`. للإيقاف: `systemctl disable --now chess-studio-update.timer` أو ثبّت بـ `AUTO_UPDATE=0`.
+- **فوري يدويًا:** `cd ~/chess-analysis-studio && bash deploy/update.sh` (أو `--force` لإعادة البناء).
+- نسخة جاهزة بدل البناء على سيرفر ضعيف: `STUDIO_IMAGE=ghcr.io/ipurplel/chess-analysis-studio:latest` قبل الأمر (تأكد أن حزمة الصورة عامة في GitHub).
+
+## النسخ الاحتياطي وإعدادات
 - نسخ احتياطي: `docker run --rm -v chess-analysis-studio_studio-data:/d -v $PWD:/b busybox tar czf /b/studio-backup.tgz -C /d .`
 - خلف HTTPS (Caddy/Nginx): ضع `COOKIE_SECURE=1` في بيئة الخدمة.
+- متغيرات: `ENGINE_WORKERS`، `ANALYSIS_MOVETIME`، `PORT`، `DATA_DIR`، `PUZZLE_LIBRARY=0` (يمنع تنزيل مكتبة التمارين).
 
 ## الاستخدام
-- كل شخص ينشئ **ملفًا** (اسم + رمز أرقام اختياري 4–12). حساباته ومبارياته وتمارينه منفصلة، وكل متصفح له جلسته. ضع رمزًا حتى لا يدخل ملفك غيرك على الشبكة.
+- كل شخص ينشئ **ملفًا** (اسم + رمز أرقام اختياري 4–12). حساباته ومبارياته وتمارينه منفصلة، وكل متصفح له جلسته. ضع رمزًا حتى لا يدخل ملفك غيرك. يمكنك حذف ملفك وكل بياناتك من الإعدادات.
 - الإعدادات ← أضف حساب chess.com/lichess ← مزامنة. التحليل يبدأ تلقائيًا في الخلفية.
-- **Brilliant** تقدير شفاف بالقواعد وليس خوارزمية chess.com نفسها؛ الشروط والعتبات في `packages/core/src/review.ts` وعند تغييرها يعاد تصنيف المخزّن بدون محرك.
+- **مراجعة المباراة:** اضغط الرقم في جدول الأنواع (مثلًا الأخطاء الفادحة) لتنتقل لتلك النقلة، وزر "جرّب النقلة الأفضل" يعيدك للوضعية قبل خطئك لتكمل الخط الأفضل حتى 8 نقلات.
+- **الافتتاحيات:** اختر افتتاحية ← سيناريو ← "تعلّم" (شرح كل نقلة) ثم "تدرّب" ثم "العب ضد بوت من هنا". وتقدر تقلب الدور (تلعب الافتتاحية أو الرد المضاد).
+- **Brilliant** تقدير شفاف بالقواعد وليس خوارزمية chess.com نفسها؛ العتبات في `packages/core/src/review.ts`، وأداة المعايرة `apps/server/scripts/calibrate.ts`.
 
 ## التطوير
-```
+```bash
 npm install && npm run build && npm start     # http://localhost:3000
-npm test                                      # نواة التصنيف + واجهة الـAPI وعزل المستخدمين
+npm test                                      # ترجمات + أنواع + نواة التصنيف + الـAPI وعزل المستخدمين
 ```
-المحرك المحلي: ضع Stockfish في `data/bin` أو حدّد `STOCKFISH_PATH`. متغيرات: `ENGINE_WORKERS`، `ANALYSIS_MOVETIME`، `PORT`، `DATA_DIR`.
+المحرك المحلي: ضع Stockfish في `data/bin` أو حدّد `STOCKFISH_PATH`.
 
 الترخيص GPL-3.0 (لاعتماد المشروع على Chessground). انظر `NOTICE.md`.

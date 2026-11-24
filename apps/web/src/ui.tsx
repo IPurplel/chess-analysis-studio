@@ -73,3 +73,22 @@ export function Reading({ label, value, sub, tone }: { label: string; value: Rea
     </div>
   );
 }
+
+const ICONS: Record<string, string> = {
+  home: 'M3 11.5 12 4l9 7.5M5.5 10v9.5h13V10',
+  games: 'M5 6h14M5 12h14M5 18h9',
+  insights: 'M4 19V5M4 19h16M8 15v-4M12 15V8M16 15v-6',
+  openings: 'M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3V4.5ZM8 17h10',
+  puzzles: 'M12 3v4m0 0a2.5 2.5 0 1 1-2.5 2.5M12 7a2.5 2.5 0 1 0 2.5 2.5M6 21v-4a6 6 0 0 1 12 0v4H6Z',
+  play: 'M8 5.5v13l11-6.5-11-6.5Z',
+  sprint: 'M6 21V4m0 1h11l-2 4 2 4H6',
+  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12l2-1-1-3-2.2.4-1.4-1.6.3-2.3-3-1-1.2 1.9h-2L9.3 3.5l-3 1 .3 2.3-1.4 1.6L3 8l-1 3 2 1v2l-2 1 1 3 2.2-.4 1.4 1.6-.3 2.3 3 1 1.2-1.9h2l1.2 1.9 3-1-.3-2.3 1.4-1.6L20 17l1-3-2-1v-1Z',
+};
+/** Small stroke icons for the sidebar (decorative: the label next to them carries the meaning). */
+export function Icon({ name }: { name: string }) {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <path d={ICONS[name] ?? ICONS.home} />
+    </svg>
+  );
+}

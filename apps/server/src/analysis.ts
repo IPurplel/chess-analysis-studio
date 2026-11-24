@@ -48,8 +48,14 @@ export async function analyseGame(gameId: number): Promise<void> {
 }
 
 /** Classify stored evals and write the review + per-move stats (+ puzzles for fresh analyses). */
-function persist(g: any, evals: PositionEval[], fens: string[], withPuzzles: boolean) {
+function persist(g: any, evals: PositionEval[], fens0: string[], withPuzzles: boolean) {
   const moves: string[] = JSON.parse(g.moves_uci);
+  let fens = fens0;
+  if (withPuzzles && fens.length === 0) {
+    const c = new Chess();
+    fens = [c.fen()];
+    for (const m of moves) { playUci(c, m); fens.push(c.fen()); }
+  }
   const review = reviewGame({ moves, evals, bookPlies: g.book_plies ?? 0, ratings: { w: g.white_rating, b: g.black_rating } });
   const mineColor = g.color as 'w' | 'b';
   tx(() => {
@@ -60,12 +66,13 @@ function persist(g: any, evals: PositionEval[], fens: string[], withPuzzles: boo
     for (const m of review.moves) ins.run(g.id, g.profile_id, m.ply, m.color === mineColor ? 1 : 0, m.category, m.phase, m.loss, m.accuracy, m.kind);
     if (withPuzzles) {
       // Puzzles from the player's own mistakes/blunders (position before the move, engine line as the answer).
-      const puz = db.prepare('INSERT OR IGNORE INTO puzzles(profile_id,game_id,ply,fen,solution,played,category,theme,due_at) VALUES (?,?,?,?,?,?,?,?,0)');
+      const puz = db.prepare(`INSERT INTO puzzles(profile_id,game_id,ply,fen,solution,played,category,theme,due_at) VALUES (?,?,?,?,?,?,?,?,0)
+        ON CONFLICT(profile_id,game_id,ply) DO UPDATE SET solution=excluded.solution, category=excluded.category, theme=excluded.theme`);
       for (const m of review.moves) {
         if (m.color !== mineColor || (m.category !== 'blunder' && m.category !== 'mistake')) continue;
         const line = evals[m.ply]?.lines[0];
         if (!line || line.pv.length === 0) continue;
-        puz.run(g.profile_id, g.id, m.ply, fens[m.ply], JSON.stringify(line.pv.slice(0, 4)), m.uci, m.category, m.phase);
+        puz.run(g.profile_id, g.id, m.ply, fens[m.ply], JSON.stringify(line.pv.slice(0, 8)), m.uci, m.category, m.phase);
       }
     }
     db.prepare("UPDATE games SET status='done', error=NULL WHERE id=?").run(g.id);
@@ -80,7 +87,7 @@ export async function rereviewOutdated(): Promise<number> {
     const r = db.prepare('SELECT json FROM reviews WHERE game_id=?').get(game_id) as { json: string } | undefined;
     if (!g || !r) continue;
     try {
-      persist(g, JSON.parse(r.json).evals as PositionEval[], [], false);
+      persist(g, JSON.parse(r.json).evals as PositionEval[], [], true);
     } catch (e) {
       console.error('re-review failed for game', game_id, (e as Error).message);
     }

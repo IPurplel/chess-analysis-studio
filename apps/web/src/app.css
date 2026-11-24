@@ -208,3 +208,48 @@ ul.plain { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp
   .tasklist li { grid-template-columns: minmax(0, 1fr) auto; }
 }
 @media (prefers-reduced-motion: reduce) { .skeleton, .splash-mark { animation: none; } }
+
+/* review: counts that jump to the move */
+.countbtn { min-height: 32px; min-width: 40px; background: transparent; border: var(--rule-hair) solid var(--color-rule-2); border-radius: var(--radius-pill); color: var(--color-ink); cursor: pointer; transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out); }
+.countbtn:hover { background: var(--color-paper-3); border-color: var(--color-accent); }
+
+/* opening trainer */
+.famcard { text-align: start; cursor: pointer; color: var(--color-ink); transition: border-color var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out); }
+.famcard:hover { border-color: var(--color-accent); background: var(--color-paper-3); }
+.famtitle { font-size: var(--text-xl); }
+.stepbar { inline-size: 100%; block-size: 6px; accent-color: var(--color-accent); }
+.lessonstep { display: grid; gap: var(--space-xs); }
+.lesson-move { font-size: var(--text-md); }
+.sanbtn { background: transparent; border: 0; color: var(--color-muted); cursor: pointer; padding: var(--space-2xs) var(--space-3xs); border-radius: 4px; font: inherit; }
+.sanbtn:hover { background: var(--color-paper-3); color: var(--color-ink); }
+.sanbtn.is-played { color: var(--color-ink); }
+.sanbtn.is-next { color: var(--color-accent); background: var(--color-accent-soft); }
+
+/* ---------- polish from the design + accessibility review */
+:root { --color-control-edge: oklch(52% 0.01 250); }
+input, select, .segmented, .countbtn, .chip-btn { border-color: var(--color-control-edge); }
+.btn { border-color: var(--color-control-edge); }
+.btn-primary { border-color: var(--color-accent); }
+.btn-quiet { border-color: transparent; }
+.btn-quiet:hover { border-color: var(--color-control-edge); }
+.btn-lg { min-height: 52px; font-size: var(--text-md); padding-inline: var(--space-lg); }
+.skip { position: absolute; inset-inline-start: var(--space-sm); inset-block-start: -80px; z-index: var(--z-toast); background: var(--color-accent); color: var(--color-accent-ink); padding: var(--space-xs) var(--space-md); border-radius: var(--radius-pill); font-weight: 500; text-decoration: none; }
+.skip:focus { inset-block-start: var(--space-sm); }
+.content:focus { outline: none; }
+.icon { flex: none; opacity: .9; }
+.side nav a { gap: var(--space-sm); }
+.moveinput { margin-block-start: var(--space-xs); }
+.moveinput .field { min-width: 0; }
+.is-solved .board-wrap { outline: 3px solid var(--color-ok); outline-offset: 4px; border-radius: 4px; }
+.content > * { animation: fadein var(--dur-short) var(--ease-out) both; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+progress.stepbar { appearance: none; border: 0; border-radius: 4px; background: var(--color-rule); overflow: hidden; }
+progress.stepbar::-webkit-progress-bar { background: var(--color-rule); }
+progress.stepbar::-webkit-progress-value { background: var(--color-accent); }
+progress.stepbar::-moz-progress-bar { background: var(--color-accent); }
+@media (pointer: coarse) {
+  :root { --control-h: 48px; }
+  .side nav a, .tab, .segmented button { min-height: 48px; }
+  .movecell, .sanbtn, .chip-btn, .countbtn, .moverow .movecell { min-height: 44px; }
+  .sanbtn { padding-inline: var(--space-xs); }
+}

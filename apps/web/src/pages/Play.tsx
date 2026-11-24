@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
-import { Board } from '../Board';
+import { Board, MoveInput } from '../Board';
 import { api } from '../api';
 import { t } from '../i18n';
 import { Tabs } from '../ui';
@@ -16,10 +16,10 @@ const ENDGAMES = [
   { id: 'kpk-draw', fen: '8/8/4k3/8/4PK2/8/8/8 w - - 0 1', color: 'b' as const, goal: 'draw' as const },
 ];
 
-interface GameProps { startFen: string; color: 'w' | 'b'; elo: number; goal?: 'mate' | 'win' | 'draw'; canHint?: boolean }
+export interface GameProps { startFen: string; color: 'w' | 'b'; elo: number; goal?: 'mate' | 'win' | 'draw'; canHint?: boolean }
 
 /** A game against the engine from any position. */
-function BotGame({ startFen, color, elo, goal, canHint = true }: GameProps) {
+export function BotGame({ startFen, color, elo, goal, canHint = true }: GameProps) {
   const [fen, setFen] = useState(startFen);
   const hist = useRef<string[]>([startFen]);
   const sans = useRef<string[]>([]);
@@ -74,6 +74,7 @@ function BotGame({ startFen, color, elo, goal, canHint = true }: GameProps) {
           {canHint && <button className="btn" onClick={getHint} disabled={!myTurn || thinking || !!over}>{t('play.hint')}</button>}
         </div>
         <p role="status" className={over ? `fb fb-${over.tone}` : 'muted'}>{over?.text ?? (thinking ? t('play.thinking') : myTurn ? t('play.yourTurn') : '')}</p>
+        {myTurn && !over && !thinking && <MoveInput fen={fen} onMove={apply} />}
         <p className="measured movesline" dir="ltr">{sans.current.map((s, i) => (i % 2 === 0 ? `${Math.floor(i / 2) + 1}. ` : '') + s).join(' ')}</p>
       </aside>
     </div>

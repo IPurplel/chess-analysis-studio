@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
-import { Board } from '../Board';
+import { Board, MoveInput } from '../Board';
 import { t } from '../i18n';
 import { themeName } from '../api';
 
@@ -75,7 +75,7 @@ export function PuzzlePlayer({ puzzle, onResult, onNext }: { puzzle: PuzzleData;
   else if (stepHint >= 1 && expected) arrows.push(stepHint >= 2 ? { from: sq(expected)[0], to: sq(expected)[1], brush: 'blue' } : { from: sq(expected)[0], brush: 'blue' });
 
   return (
-    <div className="train">
+    <div className={`train ${status === 'solved' ? 'is-solved' : ''}`}>
       <Board fen={fen} orientation={puzzle.orientation} lastMove={last} interactive={status === 'play'} onMove={onMove} arrows={arrows} nonce={nonce} />
       <aside className="panel puzzle-side">
         <p>{t('pz.yourTurn', { side: t(puzzle.orientation === 'white' ? 'common.white' : 'common.black') })}</p>
@@ -88,6 +88,7 @@ export function PuzzlePlayer({ puzzle, onResult, onNext }: { puzzle: PuzzleData;
           {status === 'play' && <button className="btn btn-quiet" onClick={reveal}>{t('pz.solution')}</button>}
           {status !== 'play' && <button className="btn btn-primary" onClick={onNext} autoFocus>{t('pz.next')}</button>}
         </div>
+        {status === 'play' && <MoveInput fen={fen} onMove={onMove} />}
       </aside>
     </div>
   );

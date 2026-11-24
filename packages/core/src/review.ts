@@ -14,7 +14,7 @@ export interface PositionEval {
 }
 
 /** Bump when classification rules change; the server re-reviews stored analyses (no engine needed). */
-export const REVIEW_VERSION = 4;
+export const REVIEW_VERSION = 5;
 
 /** Why a weak move was weak, in terms a learner can train against. */
 export type MistakeKind = 'allows-mate' | 'hangs-piece' | 'allows-tactic' | 'missed-mate' | 'missed-material' | 'positional';

@@ -9,6 +9,7 @@ import { Play } from './pages/Play';
 import { Sprint } from './pages/Sprint';
 import { Settings } from './pages/Settings';
 import { Review } from './pages/Review';
+import { Icon } from './ui';
 
 /** A crash in one page must not blank the whole app. */
 class Boundary extends Component<{ children: ReactNode; resetKey: string }, { error: Error | null }> {
@@ -96,9 +97,9 @@ function Login({ onDone }: { onDone: () => void }) {
   );
 }
 
-const NAV: [string, string][] = [
-  ['/', 'nav.home'], ['/games', 'nav.games'], ['/insights', 'nav.insights'], ['/openings', 'nav.openings'],
-  ['/puzzles', 'nav.puzzles'], ['/play', 'nav.play'], ['/sprint', 'nav.sprint'], ['/settings', 'nav.settings'],
+const NAV: [string, string, string][] = [
+  ['/', 'nav.home', 'home'], ['/games', 'nav.games', 'games'], ['/insights', 'nav.insights', 'insights'], ['/openings', 'nav.openings', 'openings'],
+  ['/puzzles', 'nav.puzzles', 'puzzles'], ['/play', 'nav.play', 'play'], ['/sprint', 'nav.sprint', 'sprint'], ['/settings', 'nav.settings', 'settings'],
 ];
 
 export function App() {
@@ -106,7 +107,14 @@ export function App() {
   const me = useApi<any>('/me');
   const [path, q] = useHash();
   const [menu, setMenu] = useState(false);
+  const lang = useLang();
   useEffect(() => { setMenu(false); window.scrollTo(0, 0); }, [path]);
+  // each page gets its own document title (screen readers and the tab strip rely on it)
+  useEffect(() => {
+    const hit = NAV.find(([to]) => (to === '/' ? path === '/' : path.startsWith(to)));
+    const page = path.startsWith('/review') ? t('nav.games') : hit ? t(hit[1]) : '';
+    document.title = page ? `${page} · ${t('app.name')}` : t('app.name');
+  }, [path, lang]);
 
   if (me.loading && !me.data && !me.error) return <div className="splash" role="status" aria-busy="true" aria-label={t('common.loading')}><span className="splash-mark">{t('app.name')}</span></div>;
   if (me.error || !me.data) return <Login onDone={me.reload} />;
@@ -131,13 +139,14 @@ export function App() {
 
   return (
     <div className="shell">
+      <a className="skip" href="#content" onClick={(e) => { e.preventDefault(); document.getElementById('content')?.focus(); }}>{t('a11y.skip')}</a>
       <header className="side">
         <div className="side-top">
           <a className="brand" href="#/">{t('app.name')}</a>
           <button className="btn btn-quiet menu-btn" aria-expanded={menu} aria-controls="sidenav" onClick={() => setMenu(!menu)}>{t('nav.menu')}</button>
         </div>
         <nav id="sidenav" className={menu ? 'is-open' : ''} aria-label="main">
-          {NAV.map(([to, key]) => <a key={to} href={'#' + to} aria-current={active(to) || (to === '/games' && !!rm) ? 'page' : undefined}>{t(key)}</a>)}
+          {NAV.map(([to, key, icon]) => <a key={to} href={'#' + to} aria-current={active(to) || (to === '/games' && !!rm) ? 'page' : undefined}><Icon name={icon} />{t(key)}</a>)}
         </nav>
         <div className={`side-bottom ${menu ? 'is-open' : ''}`}>
           <LangSwitch />
@@ -147,7 +156,7 @@ export function App() {
           </div>
         </div>
       </header>
-      <main className="content"><Boundary resetKey={path}>{view}</Boundary></main>
+      <main className="content" id="content" tabIndex={-1}><Boundary resetKey={path}>{view}</Boundary></main>
     </div>
   );
 }
