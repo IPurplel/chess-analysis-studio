@@ -1,8 +1,25 @@
-import { useState } from 'react';
+import { Component, useState, type ReactNode } from 'react';
 import { api, useApi, useHash, ApiError } from './api';
 import { Dashboard, Games, Openings, Coach, Settings } from './views';
 import { Review } from './Review';
 import { Train, Play } from './Play';
+
+/** A crash in one page must not blank the whole app. */
+class Boundary extends Component<{ children: ReactNode; resetKey: string }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidUpdate(prev: { resetKey: string }) { if (prev.resetKey !== this.props.resetKey && this.state.error) this.setState({ error: null }); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="state state-error" role="alert">
+        <h2>تعذّر عرض هذه الصفحة</h2>
+        <p className="measured" dir="ltr">{this.state.error.message}</p>
+        <a className="btn" href="#/">العودة للرئيسية</a>
+      </div>
+    );
+  }
+}
 
 function Login({ onDone }: { onDone: () => void }) {
   const { data } = useApi<any>('/profiles');
@@ -102,7 +119,7 @@ export function App() {
           </div>
         </div>
       </header>
-      <main className="container page">{view}</main>
+      <main className="container page"><Boundary resetKey={path}>{view}</Boundary></main>
     </>
   );
 }

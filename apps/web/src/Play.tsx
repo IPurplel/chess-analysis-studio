@@ -19,11 +19,12 @@ export function Train() {
   if (error) return <div className="state state-error" role="alert"><h2>حدث خطأ</h2><p>{error}</p></div>;
   if (!p) return <div className="state"><h2>لا توجد تمارين مستحقة الآن</h2><p>تُبنى التمارين من أخطائك الفادحة والمتوسطة بعد تحليل مبارياتك. عد لاحقًا أو زامن مباريات جديدة.</p><a className="btn" href="#/settings">المزامنة</a></div>;
 
+  const cur = fen || p.fen; // state is filled by an effect, so the first render still has ''
   const submit = async (correct: boolean) => { await api(`/puzzles/${p.id}/attempt`, { body: { correct } }); };
   const onMove = (uci: string) => {
     if (done) return;
     const expected = p.solution[step];
-    const c = new Chess(fen);
+    const c = new Chess(cur);
     if (uci === expected) {
       c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
       const reply = p.solution[step + 1];
@@ -43,7 +44,7 @@ export function Train() {
   return (
     <div className="train">
       <div>
-        <Board fen={fen} orientation={orient} interactive={!done} onMove={onMove}
+        <Board fen={cur} orientation={orient} interactive={!done} onMove={onMove}
           arrows={done && fb?.ok === false ? [{ from: p.solution[step].slice(0, 2), to: p.solution[step].slice(2, 4), brush: 'green' }] : []} />
       </div>
       <aside className="panel">

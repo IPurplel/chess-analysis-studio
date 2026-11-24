@@ -43,7 +43,8 @@ export function Board({ fen, orientation = 'white', lastMove, arrows = [], inter
   useEffect(() => {
     const api = cg.current;
     if (!api) return;
-    const chess = new Chess(fen);
+    let chess: Chess;
+    try { chess = new Chess(fen); } catch { return; } // never let a bad position take the page down
     const turn = chess.turn() === 'w' ? 'white' : 'black';
     api.set({
       fen,
